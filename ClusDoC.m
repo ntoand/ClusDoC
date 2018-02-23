@@ -1,5 +1,7 @@
 function ClusDoC(varargin)
-
+    version = '1.0.0';
+    fprintf('Clus-DoC version %s\n', version);
+    
     figObj = findobj('Tag', 'PALM GUI');
     if ~isempty(figObj)
         figure(figObj);
