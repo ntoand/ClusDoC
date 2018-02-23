@@ -790,9 +790,9 @@ function Load_Data(~,~,~)
 
         % Load mask files
         handles.MaskCellPair = zeros(size(handles.CellData, 1), 2);
+        %TODO: Disabled for testing. Need to reenable and fix this bug!
         %handles = loadMaskFiles(handles);
         handles.ClusterTable = [];
-        
         
         guidata(handles.handles.MainFig, handles);
         FunPlot(1);
