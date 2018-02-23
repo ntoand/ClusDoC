@@ -151,7 +151,7 @@ try
 
         % FAST DBSCAN CALL
 
-        class = t_dbscan(datathr(:,1), datathr(:, 2), DBSCANParams.minPts, DBSCANParams.epsilon, DBSCANParams.threads);
+        class = pdsdbscan(datathr(:,1), datathr(:, 2), DBSCANParams.minPts, DBSCANParams.epsilon, DBSCANParams.threads);
         classOut(dataThreshVector) = class;
         classOut(~dataThreshVector) = -1;
 

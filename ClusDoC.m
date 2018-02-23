@@ -790,7 +790,7 @@ function Load_Data(~,~,~)
 
         % Load mask files
         handles.MaskCellPair = zeros(size(handles.CellData, 1), 2);
-        handles = loadMaskFiles(handles);
+        %handles = loadMaskFiles(handles);
         handles.ClusterTable = [];
         
         
