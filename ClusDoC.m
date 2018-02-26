@@ -14,7 +14,7 @@ end
 function DoCGUIInitialize(varargin)
 
     figObj = findobj('Tag', 'PALM GUI');
-    if ~isempty(figObj); % If figure already exists, clear it out and reset it.
+    if ~isempty(figObj) % If figure already exists, clear it out and reset it.
         clf(figObj);
         handles = guidata(figObj);
         fig1 = figObj;
@@ -26,8 +26,6 @@ function DoCGUIInitialize(varargin)
         handles.handles.MainFig = fig1;
     end
 
-    fig1_size_pixels = getpixelposition(fig1);
-
     panel_border = 680/925-0.01;
     
     % Load in icons used here, convert to appropriate format
@@ -36,8 +34,6 @@ function DoCGUIInitialize(varargin)
 
 	[SquareSelectIcon, ~] = imread(fullfile(currPath, 'private', 'SquareROIIcon.jpg'));
 	[PolySelectIcon, ~] = imread(fullfile(currPath, 'private', 'PolyROIIcon.jpg'));
-		
-
 
     handles.handles.b_panel = uipanel(fig1, 'Units', 'normalized', 'Position', [0 0.05, 1-panel_border, 0.90], ...
         'BackgroundColor', [1 1 1], 'BorderType', 'none', 'Tag', 'b_panel');
@@ -46,7 +42,7 @@ function DoCGUIInitialize(varargin)
     %     'BackgroundColor', [0.5 0.5 0.5], 'BorderType', 'none', 'Tag', 'b_panel');
 
 
-    handles.handles.ax_panel = uipanel(fig1, 'Units', 'normalized', 'Position', [1-panel_border 0 panel_border .90], ...
+    handles.handles.ax_panel = uipanel(fig1, 'Units', 'normalized', 'Position', [1-panel_border 0.01 panel_border .90], ...
         'BackgroundColor', [1 1 1], 'BorderType', 'none', 'Tag', 'ax_panel');
     set(0,'DefaultFigureColormap',jet)
     
@@ -322,6 +318,9 @@ function DoCGUIInitialize(varargin)
 
     guidata(fig1, handles);
     initializeParameters();
+    
+    
+    statusbar(handles.handles.MainFig, 'GUI initialized'); 
     
 end
     
@@ -657,7 +656,7 @@ function Load_Data(~,~,~)
         fileName = {fileName};
     end
 
-    if ismember(filterIndex, [1, 2]);
+    if ismember(filterIndex, [1, 2])
         
         w = waitbar(0, 'Loading files...');
     
@@ -793,12 +792,13 @@ function Load_Data(~,~,~)
         % Load mask files
         handles.MaskCellPair = zeros(size(handles.CellData, 1), 2);
         %TODO: Disabled for testing. Need to reenable and fix this bug!
-        %handles = loadMaskFiles(handles);
+        handles = loadMaskFiles(handles);
         handles.ClusterTable = [];
         
         guidata(handles.handles.MainFig, handles);
         FunPlot(1);
     
+        statusbar(handles.handles.MainFig, 'Data loaded successfully!');
     end
     
     %%%%%%%%%%%%%%%%%%%
@@ -998,7 +998,10 @@ end
 
 function handles = loadMaskFiles(handles)
 
-    possibleFiles = ls(fullfile(handles.Path_name, '*.tif'));
+    possibleFiles = dir(fullfile(handles.Path_name, '*.tif'));
+    if( isempty(possibleFiles) || size(possibleFiles, 1) < 1)
+        return;
+    end
     
     handles.MaskFiles = cell(size(possibleFiles, 1), 1);
     handles.MaskImg = cell(size(possibleFiles, 1), 1);
@@ -1008,17 +1011,19 @@ function handles = loadMaskFiles(handles)
     % Mask is applied upon selection in pull-down menu
     for k = 1:size(possibleFiles, 1)
     
-        maskInfo = imfinfo(fullfile(handles.Path_name, possibleFiles(k,:)));
+        %maskInfo = imfinfo(fullfile(handles.Path_name, possibleFiles(k,:)));
+        filename = possibleFiles(k).name;
+        maskInfo = imfinfo(fullfile(handles.Path_name, filename));
         
         if maskInfo.Height == maskInfo.Width
             
             % Is square, so load it
-            maskImg = double(imread(fullfile(handles.Path_name, possibleFiles(k,:)), 'Info', maskInfo));
+            maskImg = double(imread(fullfile(handles.Path_name, filename), 'Info', maskInfo));
             
             % binarize it
             maskImg = sum(maskImg, 3);
             handles.MaskImg{k} = flipud(maskImg == max(maskImg(:)));
-            handles.MaskFiles{k, 1} = strtrim(possibleFiles(k, :));
+            handles.MaskFiles{k, 1} = strtrim(filename);
             
         end
     
