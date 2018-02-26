@@ -1,5 +1,9 @@
 # Change log
 
+**for v1.0.1**
+
+- Fix bug in loadMaskFiles when there is no mask tif file
+- Rearrange GUI controls
 
 
 **v1.0.0**

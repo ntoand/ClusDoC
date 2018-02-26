@@ -1,6 +1,7 @@
 function ClusDoC(varargin)
     version = '1.0.0';
     fprintf('Clus-DoC version %s\n', version);
+    close all; % for easier debugging
     
     figObj = findobj('Tag', 'PALM GUI');
     if ~isempty(figObj)
@@ -42,7 +43,7 @@ function DoCGUIInitialize(varargin)
     %     'BackgroundColor', [0.5 0.5 0.5], 'BorderType', 'none', 'Tag', 'b_panel');
 
 
-    handles.handles.ax_panel = uipanel(fig1, 'Units', 'normalized', 'Position', [1-panel_border 0.01 panel_border .90], ...
+    handles.handles.ax_panel = uipanel(fig1, 'Units', 'normalized', 'Position', [1-panel_border 0.015 panel_border .90], ...
         'BackgroundColor', [1 1 1], 'BorderType', 'none', 'Tag', 'ax_panel');
     set(0,'DefaultFigureColormap',jet)
     
@@ -90,211 +91,201 @@ function DoCGUIInitialize(varargin)
     % Button Dimensions - now in relative units.
     butt_width = .96;
     butt_height = .08;
+    butt_offset_y = butt_height / 5;
+    butt_offset_y2 = butt_height / 8;
 
     space1 = 0.01;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Button Panel 2
+    space2 = 2 * space1;
+    col2_x = 0.28; % end of text colume ~ start of 2nd control column
+    col3_x = 0.85;
 
     % Load Zen Data
-    h1=butt_height;
-    w1=butt_width*2/3;
+    xbutton=space2;
+    ybutton=0.92;
 
-    xbutton=space1;
-    ybutton=1-(space1+h1);
-% 
-%     handles.handles.hLoad_Zen =     uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', ...
-%         'String', 'Set Input and Output Paths',...
-%         'Position', [xbutton ybutton w1 h1],'Callback', @Load_Data, 'Tag', 'Load_Data');
-
-    % Load a data set
-    %       h1=butt_height;
-    %       w2=butt_width*1/3;
-    %
-    %       xbutton2=space1+0.005+w1;
-    %       ybutton2=ybutton;
-
-    %     handles.handles.hLoad_DataSet= uicontrol(handles.handles.b_panel2, 'Units', 'normalized','Style','pushbutton','String','<html>Load <br>Dataset<html>',...
-    %  'Position',[xbutton2 ybutton2 w2 h1], 'Callback', @Load_DataSet, 'Tag', 'SelectROI','enable','on');
-
-    % Button Load individual cell
+    % Button Load individual cell (1st row)
     h1=butt_height/2;
-    w1=butt_width*2/3;
-
-    xbutton=space1;
-    ybutton=ybutton-(space1+h1);
-
-    handles.handles.hLoad_cell =     uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'text', 'String', 'Active Cell : ',...
-        'Position', [xbutton-0.1 ybutton-h1/4 w1 h1], 'Tag', 'Load_Cell', 'horizontalalignment', 'right', 'backgroundcolor', [1 1 1], 'fontsize', 10);
+    w1=col2_x;
+    xbutton=space2;
+    ybutton=ybutton-(space1+h1)-h1/4;
+    handles.handles.hLoad_cell =     uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'text', 'String', 'Active Cell',...
+        'Position', [xbutton ybutton w1 h1], 'Tag', 'Load_Cell', 'horizontalalignment', 'left', 'backgroundcolor', [1 1 1], 'fontsize', 10);
 
     % Popupmenu for selected Cell
     h2=butt_height/3;
-    w2=butt_width/3;
-
-    xbutton2=space1+0.005+w1;
-    ybutton2=ybutton+h1/4;
-
+    w2=col3_x - col2_x - space1;
+    xbutton2=col2_x;
+    ybutton2=ybutton + butt_offset_y;
     handles.handles.popupCell2 =     uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'popup', 'String', {'Cell'},...
-        'Position', [xbutton2-0.1 ybutton2 w2 h2],'Callback', @popupCell_Callback2, 'Tag', 'SelectCell');
+        'Position', [xbutton2 ybutton2 w2 h2],'Callback', @popupCell_Callback2, 'Tag', 'SelectCell');
 
-    
+    h3=1.3*h2;
+    w3=1 - col3_x - space1;
+    xbutton3=col3_x;
+    ybutton3=ybutton + butt_offset_y2;
 	handles.handles.DeleteCell =     uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', {'X'},...
-        'Position', [xbutton2+0.24 ybutton2-h2/4 w2/3 1.3*h2],'Callback', @DeleteCell, 'Tag', 'DeleteCell', 'enable', 'off');
+        'Position', [xbutton3 ybutton3 w3 h3],'Callback', @DeleteCell, 'Tag', 'DeleteCell', 'enable', 'off');
     
 
-    % PushButton to Create ROI
+    % PushButton to Create ROI (2nd row)
     h1=butt_height/2;
-    w1=butt_width*2/3;
-
-    xbutton=space1;
-    ybutton=ybutton-(space1+h1);
+    w1=col2_x;
+    xbutton=space2;
+    ybutton=ybutton-(space1+h1)-h1/4;
+    handles.handles.hSelectROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','text','String','Active ROI',...
+        'Position',[xbutton ybutton w1 h1], 'Tag', 'SelectROI', 'horizontalAlignment', 'left', 'backgroundcolor', [1 1 1], 'fontsize', 10);
     
-    handles.handles.hSelectROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','text','String','Active ROI : ',...
-        'Position',[xbutton-0.1 ybutton-h1/4 w1 h1], 'Tag', 'SelectROI', 'horizontalAlignment', 'right', 'backgroundcolor', [1 1 1], 'fontsize', 10);
-
-
     % Popupmenu for selected ROI
     h2=butt_height/3;
-    w2=butt_width/3;
-
-    xbutton2=space1+0.005+w1;
-    ybutton2=ybutton+h1/4;
-
+    w2=col3_x - col2_x - space1;
+    xbutton2=col2_x;
+    ybutton2=ybutton + butt_offset_y;
     handles.handles.popupROI2 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'popup', 'String', {'ROI'},...
-        'Position', [xbutton2-0.1 ybutton2 w2 h2], 'Callback', @popupROI_Callback2, 'Tag', 'SelectROI');
+        'Position', [xbutton2 ybutton2 w2 h2], 'Callback', @popupROI_Callback2, 'Tag', 'SelectROI');
     
+    h3=1.3*h2;
+    w3=1 - col3_x - space1;
+    xbutton3=col3_x;
+    ybutton3=ybutton + butt_offset_y2;
 	handles.handles.DeleteROI =     uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', {'X'},...
-        'Position', [xbutton2+0.24 ybutton2-h2/4 w2/3 1.3*h2],'Callback', @DeleteROI, 'Tag', 'DeleteROI', 'enable', 'off');
+        'Position', [xbutton3 ybutton3 w3 h3],'Callback', @DeleteROI, 'Tag', 'DeleteROI', 'enable', 'off');
 
-    % Select ROI
+    % Select ROI (3rd row)
     h1=butt_height/2;
-    w1=butt_width*1/5-space1/2;
+    w1=col2_x;
+    xbutton=space2;
+    ybutton=ybutton-(space1+h1)-h1/4;
+	handles.handles.hSelectROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','text','String','Add ROI',...
+        'Position',[xbutton ybutton w1 h1], 'Tag', 'SelectROI', 'horizontalAlignment', 'left', 'backgroundcolor', [1 1 1], 'fontsize', 10);
 
-    xbutton=3*w1+3*space1;
-    ybutton=ybutton-(space1+h1);
-    
-	handles.handles.hSelectROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','text','String','Add ROI : ',...
-        'Position',[xbutton-2*w1 ybutton-h1/4 w1*2 h1], 'Tag', 'SelectROI', 'horizontalAlignment', 'right', 'backgroundcolor', [1 1 1], 'fontsize', 10);
-
+    w2=0.1;
+    h2 = h1;
+    xbutton2 = col2_x;
+    ybutton2 = ybutton + butt_offset_y2;
 	handles.handles.hCreateSquareROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'CData', SquareSelectIcon,...
-        'Position',[xbutton ybutton w1 h1],'Callback', @CreateSquareROI, 'Tag', 'CreateSquareROI','enable','off');
+        'Position',[xbutton2 ybutton2 w2 h2],'Callback', @CreateSquareROI, 'Tag', 'CreateSquareROI','enable','off');
     
+    xbutton3 = xbutton2+w2+space2;
 	handles.handles.hCreatePolyROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'CData', PolySelectIcon,...
-        'Position',[xbutton+w1 ybutton w1 h1],'Callback', @CreatePolyROI, 'Tag', 'CreatePolyROI','enable','off');
+        'Position',[xbutton3 ybutton2 w2 h2],'Callback', @CreatePolyROI, 'Tag', 'CreatePolyROI','enable','off');
 
     % Save Cells and ROIs set
-    h2=butt_height/2;
-    w2=butt_width*2/5-space1/2;
-    ybutton=ybutton-(space1+h1);
-
-    xbutton=3*w1+2*space1;
-    %       ybutton=ybutton;
-
+    xbutton4 = xbutton3 + w2 + 2*space2;
+    w4 = 1 - xbutton4;
     handles.handles.hSaveCellROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','pushbutton','String','Export ROIs',...
-        'Position',[xbutton ybutton w2 h2],'Callback', @SaveCellROI, 'Tag', 'SaveROI','enable','off');
+        'Position',[xbutton4 ybutton2 w4 h2],'Callback', @SaveCellROI, 'Tag', 'SaveROI','enable','off');
     
     
-    % Popupmenu for selected Mask
-    h2=butt_height/3;
-    w2=butt_width/3;
-
-    xbutton2=xbutton2+0.005;
-    ybutton2=ybutton+h1/4;
-    
-	handles.handles.maskText = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','text','String','Mask File : ',...
-        'Position',[xbutton-2.2*w1 ybutton2-2.6*h2 w1*2 h1], 'Tag', 'SelectMask', 'horizontalAlignment', 'right', 'backgroundcolor', [1 1 1], 'fontsize', 10);
-
-    handles.handles.popupMask = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'popup', 'String', {''},...
-        'Position', [xbutton2-0.1 ybutton2-2*h2 1.35*w2 h2], 'Callback', @popupMask_Callback, 'Tag', 'SelectMask');
-    
-    % Align mask to cell data button
-    h2=butt_height/2;
-    w2=butt_width*2/5-space1/2;
-    ybutton=ybutton-(space1+h1);
-
-    xbutton=3*w1+2*space1;
-    ybutton2=ybutton2-2.8*h2;
-    %       ybutton=ybutton;
-
-    handles.handles.alignMaskButton = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','pushbutton','String','Align Mask',...
-        'Position',[xbutton ybutton2 w2 h2],'Callback', @alignMask, 'Tag', 'AlignMask','enable','off');
-    
-
-    % Button RipleyK test for Active ROI
+    % Popupmenu for selected Mask (4th row)
     h1=butt_height/2;
-    w1=butt_width/2-space1/2;
+    w1=col2_x;
+    xbutton=space2;
+    ybutton=ybutton-(space1+h1)-h1/4;
+	handles.handles.maskText = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','text','String','Mask File',...
+        'Position',[xbutton ybutton w1 h1], 'Tag', 'SelectMask', 'horizontalAlignment', 'left', 'backgroundcolor', [1 1 1], 'fontsize', 10);
 
-    xbutton=space1;
-    ybutton=ybutton-(space1+4*h1);
+    h2=butt_height/3;
+    w2=1 - col2_x;
+    xbutton2=col2_x;
+    ybutton2=ybutton + butt_offset_y;
+    handles.handles.popupMask = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'popup', 'String', {''},...
+        'Position', [xbutton2 ybutton2 w2 h2], 'Callback', @popupMask_Callback, 'Tag', 'SelectMask');
+    
+    % Align mask to cell data button (5th row)
+    w1 = 1 - xbutton4; 
+    h1 = butt_height/2;
+    xbutton = xbutton4; % same as Export ROIs button
+    ybutton = ybutton-(space1+h1)-h1/4 + butt_offset_y;
+    handles.handles.alignMaskButton = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','pushbutton','String','Align Mask',...
+        'Position',[xbutton ybutton w1 h1],'Callback', @alignMask, 'Tag', 'AlignMask','enable','off');
+    
+    
+    % Select data to process (new row)
+    h1=butt_height/2;
+    w1=col2_x;
+    xbutton=space2;
+    ybutton=ybutton-(space1+h1)-h1/4-h1; % -h1 to add some space between rows
+    handles.handles.selectedDataText = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','text','String','Process',...
+        'Position',[xbutton ybutton w1 h1], 'Tag', 'SelectMask', 'horizontalAlignment', 'left', 'backgroundcolor', [1 1 1], 'fontsize', 10);
 
+    h2=butt_height/3;
+    w2=1 - col2_x;
+    xbutton2=col2_x;
+    ybutton2=ybutton + butt_offset_y;
+    handles.handles.popupSelectedData = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'popup', 'String', ...
+        {'Channels 1 and 2 separately', 'Combined data', 'Channel 1 only', 'Channel 2 only'},...
+        'Position', [xbutton2 ybutton2 w2 h2], 'Callback', @popupMask_Callback, 'Tag', 'SelectMask');
+
+    
+    % Button RipleyK test for Active ROI (new row)
+    h1=butt_height/2;
+    w1=(1-2*space2)/2;
+    xbutton=space2;
+    ybutton=ybutton-(space1+h1)-h1/4; % -h1 to add some space between rows
     handles.handles.hRipleyActiveROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'RipleyK Test',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @RipleyKtest, 'Tag', 'RipleyK_test','enable','off');
 
     % Button DBSCAN test for Active ROI
-    h1=butt_height/2;
-    w2=butt_width/2-space1/2;
-
-    xbutton=w1+2*space1;
-    %     ybutton=ybutton;
-
     handles.handles.hDBSCANActiveROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'DBSCAN Test',...
-        'Position', [xbutton ybutton w2 h1],'Callback', @DBSCAN_Test, 'Tag', 'DBSCAN_test','enable','off');
+        'Position', [xbutton+w1+space1 ybutton w1 h1],'Callback', @DBSCAN_Test, 'Tag', 'DBSCAN_test','enable','off');
 
-    % Button RipleyK for Selected ROIs
+    % Button RipleyK for Selected ROIs (new row
     h1=butt_height/2;
-    w1=butt_width;
-
-    xbutton=space1;
-    ybutton=ybutton-(space1+2*h1);
-
+    w1=1-2*space2;
+    xbutton=space2;
+    ybutton=ybutton-(space1+h1)-h1/4-h1; % -h1 to add some space between rows
     handles.handles.hRipleyK_All = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'RipleyK for All',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @RipleyK_All, 'Tag', 'RipleyK_ROI','enable','off');
 
     % Button DBSCAN for Selected ROIs
     h1=butt_height/2;
-    w1=butt_width;
-
-    xbutton=space1;
-    ybutton=ybutton-(space1+h1);
-
+    w1=1-2*space2;
+    xbutton=space2;
+    ybutton=ybutton-h1-space1;
     handles.handles.hDBSCAN_All = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'DBSCAN for All',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @DBSCAN_All, 'Tag', 'DBSCAN_All','enable','off');
 
     % Button Degree of colocalisation
     h1=butt_height/2;
-    w1=butt_width;
-
-    xbutton=space1;
-    ybutton=ybutton-(space1+h1);
-
+    w1=1-2*space2;
+    xbutton=space2;
+    ybutton=ybutton-h1-space1;
     handles.handles.hDoC_All1 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Clus-DoC for All',...
+        'Position', [xbutton ybutton w1 h1], 'Callback', @DoC_All, 'Tag', 'DoC_All','enable','off');
+    
+    % Button probability of co-localisation (PoC)
+    h1=butt_height/2;
+    w1=1-2*space2;
+    xbutton=space2;
+    ybutton=ybutton-h1-space1;
+    handles.handles.hPoC_All1 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'PoC for All',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @DoC_All, 'Tag', 'DoC_All','enable','off');
     
     % Button Results Explorer
     h1=butt_height/2;
-    w1=butt_width;
-
-    xbutton=space1;
-    ybutton=ybutton-(space1+2*h1);
+    w1=1-2*space2;
+    xbutton=space2;
+    ybutton=ybutton-h1-space1 -h1; % -h1 to add some space between rows
     handles.handles.ResultsExplorerButton = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Results Explorer',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @ResultsExplorerPush, 'Tag', 'ResultsExplorer', 'enable', 'off', 'visible', 'off');
     
     % Button ExporttoText
     h1=butt_height/2;
-    w1=butt_width;
-
-    xbutton=space1;
-    ybutton=ybutton-(space1+2*h1);
+    w1=1-2*space2;
+    xbutton=space2;
+    ybutton=ybutton-h1-space1;
     handles.handles.ExportResultsButton = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Export Result Tables',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @ExportToTextPush, 'Tag', 'ExportToText', 'enable', 'off');
 
     % Button Reset
     h1=butt_height/2;
-    w1=butt_width;
-
-    xbutton=space1;
-    ybutton=ybutton-(space1+2*h1);
+    w1=1-2*space2;
+    xbutton=space2;
+    ybutton=ybutton-space2 -h1; % -h1 to add some space between rows
     handles.handles.hreset = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Reset',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @Reset, 'Tag', 'Reset','enable','on');
 
