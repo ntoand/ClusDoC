@@ -4,6 +4,8 @@
 
 - Fix bug in loadMaskFiles when there is no mask tif file
 - Rearrange GUI controls
+- Fix bugs in DBSCAN when running with Lr_r=off and Stat=on
+- Add new process data mode: combined data 
 
 
 **v1.0.0**

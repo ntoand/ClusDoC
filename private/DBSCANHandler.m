@@ -8,15 +8,21 @@ function [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHan
     % will fail and crash MATLAB.  
     % To pass test, there have to be at least DBSCANParams.minPts points
     % that are within DBSCANParams.epsilon distance from other points.  
-    distRow = pdist(Data(:,1:2));
-    nPossibleClustering = sum(distRow < DBSCANParams.epsilon);
-    if nPossibleClustering >= DBSCANParams.minPts
-        checkClusterTest = true;
+    
+    % !!!Cannot check for big dataset due to memory issue
+    if(size(Data, 1) < 10000)
+        distRow = pdist(Data(:,1:2));
+        nPossibleClustering = sum(distRow < DBSCANParams.epsilon);
+        if nPossibleClustering >= DBSCANParams.minPts
+            checkClusterTest = true;
+        else
+            checkClusterTest = false;
+        end
     else
-        checkClusterTest = false;
+        disp('WARNING: cannot check input data because it is too big');
+        checkClusterTest = true;
     end
     
-
     if ~checkClusterTest
         % No chance of a cluster.  MEX code is going to throw a fault.
         % Skip this ROI.
@@ -29,10 +35,8 @@ function [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHan
         varargout{1} = [];
         varargout{2} = [];
         varargout{3} = [];
-        varargout{4} = [];
-        
+        varargout{4} = [];    
         return
-        
     end
 
 try 
@@ -261,10 +265,6 @@ try
                 end
 
 
-
-
-
-
                 if Nb >= DBSCANParams.Cutoff
                     SumofBigContour = [SumofBigContour; contour; NaN NaN ];
                 else
@@ -304,7 +304,9 @@ try
         %      Cluster=Cluster(index);
         %%
 
-        if display2
+        % 2018.02.27 Toan Nguyen, Density is only available if using Lr_r
+        %if display2
+        if display2 && DBSCANParams.UseLr_rThresh
 
             Density = datathr(:,6);
     %         assignin('base', 'Density', Density);
@@ -371,14 +373,16 @@ try
             Result.Number(1) = mean(cell2mat(cellfun(@(x) x.Nb(x.Nb > DBSCANParams.Cutoff), ClusterSmooth, 'UniformOutput', false)));
             Result.Area(1) = mean(cell2mat(cellfun(@(x) x.Area(x.Nb > DBSCANParams.Cutoff), ClusterSmooth, 'UniformOutput', false)));
             Result.Mean_Circularity(1) = mean(cell2mat(cellfun(@(x) x.Circularity(x.Nb > DBSCANParams.Cutoff), ClusterSmooth, 'UniformOutput', false)));
-            Result.Density = mean(cell2mat(cellfun(@(x) x.Density(x.Nb > DBSCANParams.Cutoff), ClusterSmooth, 'UniformOutput', false)));
+            % Toan Nguyen 2018/02/27. Result.Density is not available if
+            % UseLr_rThresh = false
+            
             
             if DBSCANParams.UseLr_rThresh
-            
+                Result.Density = mean(cell2mat(cellfun(@(x) x.Density(x.Nb > DBSCANParams.Cutoff), ClusterSmooth, 'UniformOutput', false)));
                 Result.RelativeDensity = mean(cell2mat(cellfun(@(x) x.RelativeDensity(x.Nb > DBSCANParams.Cutoff), ClusterSmooth, 'UniformOutput', false)));
                 
             else
-                
+                Result.Density = NaN;
                 Result.RelativeDensity = NaN;
                 
             end
@@ -397,7 +401,7 @@ catch mError
     assignin('base', 'DBSCANParams', DBSCANParams);
     assignin('base', 'DBSCANInputArgs', varargin);
 
-    display('DBSCANHandler failed with errors');
+    disp('DBSCANHandler failed with errors');
     rethrow(mError);
 end
 

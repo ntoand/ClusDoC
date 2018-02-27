@@ -81,8 +81,11 @@ function valOut = RipleyKHandler(handles, Start, End, Step, MaxSampledPts, Chan1
 
                         Matrix_Result = [r, Lr_r];
                         SheetName = sprintf('Cell_%dRegion_%d', p, q);
-                        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), 'RipleyK Results.xls'), ArrayHeader, SheetName, 'A1');
-                        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), 'RipleyK Results.xls'), Matrix_Result, SheetName, 'A2');
+                        if ispc
+                            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), 'RipleyK Results.xls'), ArrayHeader, SheetName, 'A1');
+                            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), 'RipleyK Results.xls'), Matrix_Result, SheetName, 'A2');
+                    
+                        end
                     end
                 end
                 
@@ -109,19 +112,22 @@ function valOut = RipleyKHandler(handles, Start, End, Step, MaxSampledPts, Chan1
         Max_r_Ave=[mean(Max_r(:,chan)), std(Max_r(:,chan))];
         Max_Lr_Ave=[mean(Max_Lr(:,chan)), std(Max_Lr(:,chan))];
 
-        % Data average on all the regions and cells
-        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), ArrayHeader, 'Pooled data', 'A1');
-        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), Average_Lr_r, 'Pooled data', 'A2');
+        % only write excel file on PC
+        if ispc
+            % Data average on all the regions and cells
+            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), ArrayHeader, 'Pooled data', 'A1');
+            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), Average_Lr_r, 'Pooled data', 'A2');
 
-        % average for max Lr-r and r(max Lr-r)
-        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [{'r(max_Lr)'},{'Max_Lr'}], 'Pooled data', 'D3');
-        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [{'Mean'},{'Std'}]', 'Pooled data', 'E2');
-        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [Max_r_Ave' Max_Lr_Ave'], 'Pooled data', 'E3');
+            % average for max Lr-r and r(max Lr-r)
+            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [{'r(max_Lr)'},{'Max_Lr'}], 'Pooled data', 'D3');
+            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [{'Mean'},{'Std'}]', 'Pooled data', 'E2');
+            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [Max_r_Ave' Max_Lr_Ave'], 'Pooled data', 'E3');
 
-        % max Lr-r and r(max Lr-r) for each region
-        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [{'r(max_Lr)'},{'Max_Lr'}], 'Pooled data', 'E6');
-        xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [Max_r; Max_Lr]', 'Pooled data', 'E7');
-
+            % max Lr-r and r(max Lr-r) for each region
+            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [{'r(max_Lr)'},{'Max_Lr'}], 'Pooled data', 'E6');
+            xlswrite(fullfile(Fun_OutputFolder_name, 'RipleyK Results', sprintf('Ch%d', chan), sprintf('Ch%dPooled.xls', chan)), [Max_r; Max_Lr]', 'Pooled data', 'E7');
+        end
+        
         handles.handles.RipleyKMeanFig = figure('color', [1 1 1]);
         clf(handles.handles.RipleyKMeanFig);
         handles.handles.RipleyKMeanAx = axes('parent', handles.handles.RipleyKMeanFig, 'nextplot', 'add');

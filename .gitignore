@@ -1,3 +1,4 @@
+*.m~
 *.obj
 *.o
 .DS_Store
@@ -5,3 +6,5 @@ build
 output
 *.mexmaci64
 *.bk
+dev
+Extracted_Region

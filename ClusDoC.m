@@ -2,14 +2,21 @@ function ClusDoC(varargin)
     version = '1.0.0';
     fprintf('Clus-DoC version %s\n', version);
     close all; % for easier debugging
+    DEBUG = true;
+    if(DEBUG)
+        addpath('dev'); % "ln -s private dev" to debug line by line in private funcs
+    end
     
     figObj = findobj('Tag', 'PALM GUI');
     if ~isempty(figObj)
         figure(figObj);
     else
-        DoCGUIInitialize();
+        DoCGUIInitialize(DEBUG);
     end
-    
+end
+
+function UpdateStatusBar(handles, str)
+    statusbar(handles.handles.MainFig, str);
 end
 
 function DoCGUIInitialize(varargin)
@@ -26,6 +33,7 @@ function DoCGUIInitialize(varargin)
 
         handles.handles.MainFig = fig1;
     end
+    handles.DEBUG = varargin{1};
 
     panel_border = 680/925-0.01;
     
@@ -52,32 +60,30 @@ function DoCGUIInitialize(varargin)
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Load panel objects
-    
+    % Button
+    handles.handles.Load_out =     uicontrol(handles.handles.loadPanel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Select Input File(s)',...
+        'Position', [0.01    0.6710    0.1500    0.2890],...
+        'Callback', @Load_Data, 'Tag', 'Add Data File(s)');
 
-        % Button
-        handles.handles.Load_out =     uicontrol(handles.handles.loadPanel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Select Input File(s)',...
-            'Position', [0.01    0.6710    0.1500    0.2890],...
-            'Callback', @Load_Data, 'Tag', 'Add Data File(s)');
-        
-        handles.handles.Load_text = uicontrol(handles.handles.loadPanel, 'Style', 'edit', 'Units', 'normalized', ...
-            'Position',[0.200    0.6967    0.6000    0.2264], 'BackgroundColor', [1 1 1], ...
-            'String', 'Input File(s)', 'Callback', @Load_edit, 'Tag', 'Load_textbox');
-        
-        handles.handles.CoordinatesSet =     uicontrol(handles.handles.loadPanel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Select Coordinates File',...
-            'Position', [0.01    0.3610    0.1500    0.2890],...
-            'Callback', @CoordinatesPush, 'Tag', 'Set Coordinates Path');
-        
-        handles.handles.CoordinatesText = uicontrol(handles.handles.loadPanel, 'Style', 'edit', 'Units', 'normalized', ...
-            'Position',[0.200    0.3817    0.6000    0.2764], 'BackgroundColor', [1 1 1], ...
-            'String', 'Coordinates File Path', 'Callback', @CoordinatesEdit, 'Tag', 'Load_textbox');
-        
-        handles.handles.OutputSet =     uicontrol(handles.handles.loadPanel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Set Output Path',...
-            'Position', [0.01    0.0410    0.1500    0.2890],...
-            'Callback', @OutputEdit, 'Tag', 'Set Output Path');
-        
-        handles.handles.OutputText = uicontrol(handles.handles.loadPanel, 'Style', 'edit', 'Units', 'normalized', ...
-            'Position',[0.200    0.0667    0.6000    0.2764], 'BackgroundColor', [1 1 1], ...
-            'String', 'Output Folder Path', 'Callback', @OutputTextEdit, 'Tag', 'Load_textbox');
+    handles.handles.Load_text = uicontrol(handles.handles.loadPanel, 'Style', 'edit', 'Units', 'normalized', ...
+        'Position',[0.200    0.6967    0.6000    0.2264], 'BackgroundColor', [1 1 1], ...
+        'String', 'Input File(s)', 'Callback', @Load_edit, 'Tag', 'Load_textbox');
+
+    handles.handles.CoordinatesSet =     uicontrol(handles.handles.loadPanel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Select Coordinates File',...
+        'Position', [0.01    0.3610    0.1500    0.2890],...
+        'Callback', @CoordinatesPush, 'Tag', 'Set Coordinates Path');
+
+    handles.handles.CoordinatesText = uicontrol(handles.handles.loadPanel, 'Style', 'edit', 'Units', 'normalized', ...
+        'Position',[0.200    0.3817    0.6000    0.2764], 'BackgroundColor', [1 1 1], ...
+        'String', 'Coordinates File Path', 'Callback', @CoordinatesEdit, 'Tag', 'Load_textbox');
+
+    handles.handles.OutputSet =     uicontrol(handles.handles.loadPanel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Set Output Path',...
+        'Position', [0.01    0.0410    0.1500    0.2890],...
+        'Callback', @OutputEdit, 'Tag', 'Set Output Path');
+
+    handles.handles.OutputText = uicontrol(handles.handles.loadPanel, 'Style', 'edit', 'Units', 'normalized', ...
+        'Position',[0.200    0.0667    0.6000    0.2764], 'BackgroundColor', [1 1 1], ...
+        'String', 'Output Folder Path', 'Callback', @OutputTextEdit, 'Tag', 'Load_textbox');
         
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -216,9 +222,9 @@ function DoCGUIInitialize(varargin)
     w2=1 - col2_x;
     xbutton2=col2_x;
     ybutton2=ybutton + butt_offset_y;
-    handles.handles.popupSelectedData = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'popup', 'String', ...
-        {'Channels 1 and 2 separately', 'Combined data', 'Channel 1 only', 'Channel 2 only'},...
-        'Position', [xbutton2 ybutton2 w2 h2], 'Callback', @popupMask_Callback, 'Tag', 'SelectMask');
+    handles.handles.popupProcessType = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'popup', 'String', ...
+        {'Channels 1 and 2 separately', 'Combined data'},...
+        'Position', [xbutton2 ybutton2 w2 h2], 'Callback', @popupProcessType_Callback, 'Tag', 'SelectMask');
 
     
     % Button RipleyK test for Active ROI (new row)
@@ -237,33 +243,33 @@ function DoCGUIInitialize(varargin)
     h1=butt_height/2;
     w1=1-2*space2;
     xbutton=space2;
-    ybutton=ybutton-(space1+h1)-h1/4-h1; % -h1 to add some space between rows
-    handles.handles.hRipleyK_All = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'RipleyK for All',...
-        'Position', [xbutton ybutton w1 h1], 'Callback', @RipleyK_All, 'Tag', 'RipleyK_ROI','enable','off');
+    ybutton=ybutton-(space1+h1)-h1/4; % -h1 if want to add some space between rows
+    handles.handles.hRipleyK_All = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Run RipleyK',...
+        'Position', [xbutton ybutton w1 h1], 'Callback', @RunRipleyK, 'Tag', 'RipleyK_ROI','enable','off');
 
     % Button DBSCAN for Selected ROIs
     h1=butt_height/2;
     w1=1-2*space2;
     xbutton=space2;
     ybutton=ybutton-h1-space1;
-    handles.handles.hDBSCAN_All = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'DBSCAN for All',...
-        'Position', [xbutton ybutton w1 h1], 'Callback', @DBSCAN_All, 'Tag', 'DBSCAN_All','enable','off');
+    handles.handles.hDBSCAN_All = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Run DBSCAN',...
+        'Position', [xbutton ybutton w1 h1], 'Callback', @RunDBSCAN, 'Tag', 'DBSCAN_All','enable','off');
 
     % Button Degree of colocalisation
     h1=butt_height/2;
     w1=1-2*space2;
     xbutton=space2;
     ybutton=ybutton-h1-space1;
-    handles.handles.hDoC_All1 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Clus-DoC for All',...
-        'Position', [xbutton ybutton w1 h1], 'Callback', @DoC_All, 'Tag', 'DoC_All','enable','off');
+    handles.handles.hDoC_All1 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Run Clus-DoC',...
+        'Position', [xbutton ybutton w1 h1], 'Callback', @RunDoC, 'Tag', 'DoC_All','enable','off');
     
     % Button probability of co-localisation (PoC)
     h1=butt_height/2;
     w1=1-2*space2;
     xbutton=space2;
     ybutton=ybutton-h1-space1;
-    handles.handles.hPoC_All1 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'PoC for All',...
-        'Position', [xbutton ybutton w1 h1], 'Callback', @DoC_All, 'Tag', 'DoC_All','enable','off');
+    handles.handles.hPoC_All1 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Run PoC',...
+        'Position', [xbutton ybutton w1 h1], 'Callback', @RunPoC, 'Tag', 'DoC_All','enable','off');
     
     % Button Results Explorer
     h1=butt_height/2;
@@ -311,7 +317,7 @@ function DoCGUIInitialize(varargin)
     initializeParameters();
     
     
-    statusbar(handles.handles.MainFig, 'GUI initialized'); 
+    UpdateStatusBar(handles, 'GUI initialized'); 
     
 end
     
@@ -321,21 +327,28 @@ function initializeParameters(varargin)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
     
+    % Some constants
+    handles.CONST.DEFAULT_ROI_SIZE = 4000;
+    handles.CONST.PROCESS_SEPARATE = 1;
+    handles.CONST.PROCESS_COMBINED = 2;
+    
     % Initialize structure to pass values between GUI components
     handles.CellData = {};
     handles.ROIData = {};
     handles.ROIPos = [];
     handles.CurrentCellData = 1;
     handles.CurrentROIData = [];
+    handles.ProcessType = handles.CONST.PROCESS_SEPARATE; % Channels 1 and 2 separately
     
     handles.Path_name = pwd;
 
     % Default ROI settings
-    handles.ROISize = 4000; % Length of ROI, in nm
+    handles.ROISize = handles.CONST.DEFAULT_ROI_SIZE; % Length of ROI, in nm
 
     % Initialize some global settings
     handles.Chan1Color = [46, 204, 113]/255; % Flat UI Emerald
     handles.Chan2Color = [231, 76, 60]/255; % Flat UI Alizarin
+    handles.CombinedColor = [0, 0, 0]/255;
     handles.UnselectedROIColor = [142, 68, 173]/255; % Flat UI Peter River
     handles.ROIColor = [40, 142, 230]/255; % Flat UI Amethyst
     
@@ -346,7 +359,8 @@ function initializeParameters(varargin)
     handles.RipleyK.MaxSampledPts = 1e4;
     
     % Default DBSCAN parameters
-    for k = 1:2
+    % for channel1, channel2, combined data
+    for k = 1:3
         handles.DBSCAN(k).epsilon = 20;
         handles.DBSCAN(k).minPts = 3;
         handles.DBSCAN(k).UseLr_rThresh = true;
@@ -423,11 +437,7 @@ function CoordinatesPush(varargin)
         plotAllROIs(handles.CurrentCellData);
 
     end
-
-
-
 end
-
 
 
 % Plot SMLM data
@@ -466,9 +476,9 @@ function FunPlot(whichCell)
     
     plotAllROIs(whichCell);
     displayMaskImg(handles);
-    
 
 end
+
 
 function plotAllROIs(whichCell)
     % Plot all ROIs in current window
@@ -511,6 +521,7 @@ function plotAllROIs(whichCell)
     guidata(handles.handles.MainFig, handles); 
     
 end
+
 
 function DeleteCell(varargin)
 
@@ -586,6 +597,7 @@ function DeleteCell(varargin)
     
 end
 
+
 function DeleteROI(varargin)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
@@ -640,8 +652,13 @@ function Load_Data(~,~,~)
 
     set(get(handles.handles.b_panel, 'children'), 'enable', 'off');
 
-    
-    [fileName, pathName, filterIndex] = uigetfile({'*.txt', 'ZEN export table'; '*.csv', 'ThunderSTORM Export table'},'Select ZEN export files', 'MultiSelect', 'on');
+    if (handles.DEBUG)
+        fileName = '1.txt';
+        pathName = sprintf('%s/test_dataset/', pwd);
+        filterIndex = 1;
+    else
+        [fileName, pathName, filterIndex] = uigetfile({'*.txt', 'ZEN export table'; '*.csv', 'ThunderSTORM Export table'},'Select ZEN export files', 'MultiSelect', 'on');
+    end
     
     if ischar(fileName)
         fileName = {fileName};
@@ -677,7 +694,6 @@ function Load_Data(~,~,~)
                 handles.CellData{k}(:,handles.NDataColumns + 2) = 1; % All data is in mask until set otherwise
                 handles.ROIMultiplier = importData.Footer{2}(1); % Conversion from coordinates.txt positions to nm
                 
-                
                 % Max size calc has some issues around certain imported ZEN
                 % files
                 handles.MaxSize = importData.Footer{2}(5)*10*importData.Footer{2}(1)/importData.Footer{2}(3); % FOV size, in nm
@@ -693,15 +709,13 @@ function Load_Data(~,~,~)
                 handles.CellData{k}(any(handles.CellData{k}(:, 5:6) < 0), : )= [];
                 
                 handles.Nchannels = numel(unique(handles.CellData{k}(:,12)));
-
-                
+          
             else
                 
                 fprintf(1, 'File not in accepted coordinate table format.\nSkipping %s\n', fullfile(pathName, fileName{k}));
                 skipList(k) = 1;
 
             end
-
         end
                
         % Remove empty cells
@@ -789,7 +803,7 @@ function Load_Data(~,~,~)
         guidata(handles.handles.MainFig, handles);
         FunPlot(1);
     
-        statusbar(handles.handles.MainFig, 'Data loaded successfully!');
+        UpdateStatusBar(handles, 'Data loaded successfully!');
     end
     
     %%%%%%%%%%%%%%%%%%%
@@ -832,6 +846,7 @@ function Load_Data(~,~,~)
 
 
 end
+
 
 % Load ROI coordinates from coordinates.txt file (if existing)
 function [roiCoordinates, loadOK] = loadCoordinatesFile(fName, scaleFactor, handles)
@@ -904,7 +919,6 @@ function [roiCoordinates, loadOK] = loadCoordinatesFile(fName, scaleFactor, hand
                     thisCellsROIs(p,:) + [handles.ROISize/2 handles.ROISize/2];
                     thisCellsROIs(p,:) + [-handles.ROISize/2 handles.ROISize/2];
                     thisCellsROIs(p,:) + [-handles.ROISize/2 -handles.ROISize/2]];
-
             end
 
         end
@@ -952,7 +966,6 @@ function [roiCoordinates, loadOK] = loadCoordinatesFile(fName, scaleFactor, hand
                 % Assign ROI coordinates in proper format for inpolygon()
                 roiCoordinates{m}{p} = thisCellsROIs{p}([1:end 1], :)/scaleFactor;
                 roiCoordinates{m}{p}(:,2) = handles.MaxSize - roiCoordinates{m}{p}(:,2);
-
             end
 
         end
@@ -962,10 +975,9 @@ function [roiCoordinates, loadOK] = loadCoordinatesFile(fName, scaleFactor, hand
     else
         error('Import file format not supported');
     end
-    
-
 
 end
+
 
 function cellData = assignROIsToCellData(cellData, roiArray, nDataColumns)    
 
@@ -986,6 +998,7 @@ function cellData = assignROIsToCellData(cellData, roiArray, nDataColumns)
     end           
     
 end
+
 
 function handles = loadMaskFiles(handles)
 
@@ -1038,6 +1051,7 @@ function handles = loadMaskFiles(handles)
 
 end
 
+
 function popupMask_Callback(varargin)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
@@ -1055,6 +1069,7 @@ function popupMask_Callback(varargin)
 
 end
 
+
 function alignMask(varargin)
 
     handles = guidata(findobj('tag', 'PALM GUI'));
@@ -1071,6 +1086,7 @@ function alignMask(varargin)
     displayMaskImg(handles);
     applyMaskImgToDataTable(handles);
 end
+
 
 function displayMaskImg(handles)
 
@@ -1115,6 +1131,7 @@ function displayMaskImg(handles)
     
 end
 
+
 function applyMaskImgToDataTable(varargin)
 
     handles = guidata(findobj('tag', 'PALM GUI'));
@@ -1131,6 +1148,7 @@ function applyMaskImgToDataTable(varargin)
     guidata(handles.handles.MainFig, handles);
 
 end
+
 
 function OutputEdit(varargin)
 
@@ -1155,6 +1173,7 @@ function OutputEdit(varargin)
     end
 end
 
+
 function popupCell_Callback2(hobj, ~)
     % Called to update popup for which cell is currently displayed.
 
@@ -1166,6 +1185,7 @@ function popupCell_Callback2(hobj, ~)
     
     FunPlot(get(hobj, 'Value'));
 end
+
 
 function CreateSquareROI(~, ~, ~)
 
@@ -1219,6 +1239,7 @@ function CreateSquareROI(~, ~, ~)
  
 end
 
+
 function CreatePolyROI(~, ~, ~)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
@@ -1265,6 +1286,7 @@ function CreatePolyROI(~, ~, ~)
 
 end
 
+
 function popupROI_Callback2(~,~,~)
 
     % Set current ROI to active and mark
@@ -1278,6 +1300,7 @@ function popupROI_Callback2(~,~,~)
     guidata(handles.handles.MainFig, handles);
 
 end
+
 
 % Save the cell and ROI in matlab folder
 function SaveCellROI(~,~,~)
@@ -1311,6 +1334,14 @@ function SaveCellROI(~,~,~)
     guidata(handles.handles.MainFig, handles);
 
 end
+
+
+function popupProcessType_Callback(varargin)
+    handles = guidata(findobj('Tag', 'PALM GUI'));
+    handles.ProcessType = get(handles.handles.popupProcessType, 'Value');
+    guidata(handles.handles.MainFig, handles);
+end
+
 
 % Pop-up window to set RipleyK parameters
 function returnValue = setRipleyKParameters(handles)
@@ -1412,27 +1443,31 @@ function returnValue = setRipleyKParameters(handles)
     
 end
 
-% Pop-up window to set DBSCAN parameters
-function returnValue = setDBSCANParameters(handles)
 
-   handles.handles.DBSCANSettingsFig = figure();
-   set(handles.handles.DBSCANSettingsFig, 'Tag', 'ClusDoC');
+% Pop-up window to set DBSCAN parameters
+function returnValue = setDBSCANParameters(handles, withstats)
+
+    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
+
+    handles.handles.DBSCANSettingsFig = figure();
+    set(handles.handles.DBSCANSettingsFig, 'Tag', 'ClusDoC');
     resizeFig(handles.handles.DBSCANSettingsFig, [250 240]);
     set(handles.handles.DBSCANSettingsFig, 'toolbar', 'none', 'menubar', 'none', ...
         'name', 'DBSCAN Parameters');
-  
-    ch = 1;
         
 	handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
         'String', '_____________________', 'parent', handles.handles.DBSCANSettingsFig,...
         'Position', [0 215 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
 
+    str = 'DBSCAN Parameters for channels';
+    if(isCombined)
+        str = 'DBSCAN Parameters for combined data';
+    end
 	handles.handles.DBSCANSettingsTitleText(1) = uicontrol('Style', 'text', ...
-        'String', 'DBSCAN Parameters', 'parent', handles.handles.DBSCANSettingsFig,...
+        'String', str, 'parent', handles.handles.DBSCANSettingsFig,...
         'Position', [0 220 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
     
     %%%%%%
-    
     if verLessThan('matlab', '8.4');
         handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.2 195/250 .6 .11],...
             'SelectionChangeFcn', @changeDBSCANChannel);
@@ -1447,35 +1482,34 @@ function returnValue = setDBSCANParameters(handles)
     handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
         'Style', 'radiobutton', 'String', 'Ch 2', 'position', [90 4 50 20]);
     
-    if verLessThan('matlab', '8.4')
-        
+    if verLessThan('matlab', '8.4')     
         if handles.Nchannels > 1
-            
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
-            
-        else
-            
+            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');     
+        else  
             set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
             set(handles.handles.DBSCANChannelSelect(2), 'Enable', 'off');
-            
         end
-        
-        
     else
-        
         if handles.Nchannels > 1
-            
             handles.handles.DBSCANChannelToggle.Visible = 'on';
         else
             handles.handles.DBSCANChannelToggle.Visible = 'on';
             handles.handles.DBSCANChannelSelect(2).Enable = 'off';
-        end
-        
+        end  
     end
-        
+    
+    ch = 1;
+    if(isCombined)
+        ch = 3;
+        if verLessThan('matlab', '8.4')
+            set(handles.handles.DBSCANChannelToggle, 'Visible', 'off'); 
+        else
+            handles.handles.DBSCANChannelToggle.Visible = 'off';
+        end 
+    end
+    
     
     %%%%%%
-    
     handles.handles.DBSCANSettingsText(1) = uicontrol('Style', 'text', ...
         'String', 'Epsilon (nm):', 'parent', handles.handles.DBSCANSettingsFig,...
         'Position', [0 162 110 20], 'horizontalalignment', 'right');
@@ -1545,6 +1579,11 @@ function returnValue = setDBSCANParameters(handles)
 	handles.handles.DBSCANDoStatsToggle = uicontrol('Style', 'checkbox', ...
         'Value', handles.DBSCAN(ch).DoStats, 'position', [115 15 20 20]);
     
+    if(withstats) % avoid changing the settings by users
+        set(handles.handles.DBSCANSetToggle, 'Enable', 'off');
+        set(handles.handles.DBSCANDoStatsToggle, 'Enable', 'off');
+    end
+    
     
     handles.handles.DBSCANSettingsButton = uicontrol('Style', 'pushbutton', ...
         'String', 'Continue', 'parent', handles.handles.DBSCANSettingsFig, ...
@@ -1567,7 +1606,6 @@ function returnValue = setDBSCANParameters(handles)
         
         input = str2double(get(hObj,'string'));
         if isnan(input) 
-            
             errordlg('You must enter a numeric value','Invalid Input','modal');
 %             return;
         elseif input < 0
@@ -1577,13 +1615,12 @@ function returnValue = setDBSCANParameters(handles)
         else
             % continue
         end
-
     end
 
     function changeDBSCANChannel(varargin)
         
         changeToValue = (varargin{2}.NewValue);
-        
+
         if strcmp(changeToValue.String, 'Ch 1');
             ch = 1;
             oldCh = 2;
@@ -1640,9 +1677,9 @@ function returnValue = setDBSCANParameters(handles)
         guidata(handles.handles.MainFig, handles);
         uiresume;
         delete(handles.handles.DBSCANSettingsFig);
-        
     end    
 end
+
 
 % Pop-up window to set DoC parameters
 function returnValue = setDoCParameters(handles)
@@ -1937,11 +1974,13 @@ function returnValue = setDoCParameters(handles)
 
 end
 
+
 % Function Ripley K Test for active ROI
 function RipleyKtest(~, ~, ~)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
     
+    UpdateStatusBar(handles, 'Ripley K test on Selected ROI');
     fprintf(1, 'Ripley K test on Selected ROI\n');
     set(handles.handles.MainFig, 'pointer', 'watch');
     set(findobj('parent', handles.handles.b_panel), 'enable', 'off');
@@ -1950,100 +1989,119 @@ function RipleyKtest(~, ~, ~)
     CurrentROI = handles.ROICoordinates{handles.CurrentCellData}{handles.CurrentROIData};
     CurrentROI = [CurrentROI(1,1),  CurrentROI(1,2), max(CurrentROI(:,1)) - min(CurrentROI(:,1)), max(CurrentROI(:,2)) - min(CurrentROI(:,2))];
     
-    % Since which ROI a point falls in is encoded in binary, decode here
-    whichPointsInROI = fliplr(dec2bin(handles.CellData{handles.CurrentCellData}(:,handles.NDataColumns + 1)));
-    whichPointsInROI = whichPointsInROI(:,handles.CurrentROIData) == '1';
-    
-    xCh1 = handles.CellData{handles.CurrentCellData}(whichPointsInROI & ...
-        (handles.CellData{handles.CurrentCellData}(:, handles.NDataColumns - 1) == 1), 5:6);
-
-    xCh2 = handles.CellData{handles.CurrentCellData}(whichPointsInROI & ...
-        (handles.CellData{handles.CurrentCellData}(:, handles.NDataColumns - 1) == 1), 5:6);
-
     % RipleyK parameter
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Launch GUI window to change the set parameters, if desired
-
     returnVal = setRipleyKParameters(handles);
 
     if returnVal == 0
         set(handles.handles.MainFig, 'pointer', 'arrow');
         set(findobj('parent', handles.handles.b_panel), 'enable', 'on');
         fprintf(1, 'Ripley K test cancelled.\n');
+        UpdateStatusBar(handles, 'Ripley K test cancelled');
         drawnow;
         return;
+        
     elseif returnVal == 1
         
         try 
-
+            % Since which ROI a point falls in is encoded in binary, decode here
+            whichPointsInROI = fliplr(dec2bin(handles.CellData{handles.CurrentCellData}(:,handles.NDataColumns + 1)));
+            whichPointsInROI = whichPointsInROI(:,handles.CurrentROIData) == '1';
+            
             handles.RipleyK.size_ROI = CurrentROI(3:4);
             handles.RipleyK.Area = polyarea(handles.ROICoordinates{handles.CurrentCellData}{handles.CurrentROIData}(:,1), ...
                 handles.ROICoordinates{handles.CurrentCellData}{handles.CurrentROIData}(:,2));
-            %
-            %
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-            % Sub-sample each Ch1 and Ch2 points to improve RipleyK calculation
-            % speed, provide even density between samples
-            if size(xCh1, 1) > handles.RipleyK.MaxSampledPts
-                rKsubsample = randsample(1:size(xCh1, 1), handles.RipleyK.MaxSampledPts);
-                xCh1 = xCh1(rKsubsample, :);
-            end
-
-            if size(xCh2, 1) > handles.RipleyK.MaxSampledPts
-                rKsubsample = randsample(1:size(xCh2, 1), handles.RipleyK.MaxSampledPts);
-                xCh2 = xCh2(rKsubsample, :);
-            end
-
-            %Ch1
-            % RipleyK function
-
+            
             handles.RipleyK.r = zeros(((handles.RipleyK.End - handles.RipleyK.Start)/handles.RipleyK.Step + 1), ...
                 handles.Nchannels);
-
             handles.RipleyK.Lr_r = zeros(((handles.RipleyK.End - handles.RipleyK.Start)/handles.RipleyK.Step + 1), ...
                 handles.Nchannels);
+            
+            if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE)
+                xCh1 = handles.CellData{handles.CurrentCellData}(whichPointsInROI & ...
+                    (handles.CellData{handles.CurrentCellData}(:, handles.NDataColumns - 1) == 1), 5:6);
 
-            [handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1)] = RipleyKFun( xCh1, handles.RipleyK.Area, ...
-                handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
-                handles.RipleyK.size_ROI);
+                xCh2 = handles.CellData{handles.CurrentCellData}(whichPointsInROI & ...
+                    (handles.CellData{handles.CurrentCellData}(:, handles.NDataColumns - 1) == 2), 5:6);
+                
+                % Sub-sample each Ch1 and Ch2 points to improve RipleyK calculation
+                % speed, provide even density between samples
+                if size(xCh1, 1) > handles.RipleyK.MaxSampledPts
+                    rKsubsample = randsample(1:size(xCh1, 1), handles.RipleyK.MaxSampledPts);
+                    xCh1 = xCh1(rKsubsample, :);
+                end
 
-            % Plot
-            handles.handles.RipleyKCh1Fig = figure('Name','Active ROI Ch1', 'color', [1 1 1]); 
-            handles.handles.RipleyKCh1Ax = axes('parent', handles.handles.RipleyKCh1Fig);
-            plot(handles.handles.RipleyKCh1Ax, handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1), ...
-                'linewidth', 2, 'color', handles.Chan1Color);
-            set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'add', 'fontsize', 12);
-            title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCh1, 1), CurrentROI(3), CurrentROI(4));
-            title(title_name);
-            xlabel(handles.handles.RipleyKCh1Ax, 'r (nm)', 'fontsize', 12);
-            ylabel(handles.handles.RipleyKCh1Ax, 'L(r)-r', 'fontsize', 12);
-            set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'replace');
-
-            if handles.Nchannels == 2
-                %Ch2
-                % RipleyK function
-                [handles.RipleyK.r(:,2), handles.RipleyK.Lr_r(:,2)] = RipleyKFun( xCh2, handles.RipleyK.Area, ...
-                handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
-                handles.RipleyK.size_ROI);
+                if size(xCh2, 1) > handles.RipleyK.MaxSampledPts
+                    rKsubsample = randsample(1:size(xCh2, 1), handles.RipleyK.MaxSampledPts);
+                    xCh2 = xCh2(rKsubsample, :);
+                end
+                
+                % Channel 1
+                [handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1)] = RipleyKFun( xCh1, handles.RipleyK.Area, ...
+                    handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
+                    handles.RipleyK.size_ROI);
                 % Plot
-                handles.handles.RipleyKCh2Fig = figure('Name','Active ROI Ch2', 'color', [1 1 1]); 
-                handles.handles.RipleyKCh2Ax = axes('parent', handles.handles.RipleyKCh2Fig, 'fontsize', 12);
-                plot(handles.handles.RipleyKCh2Ax, handles.RipleyK.r(:,2), handles.RipleyK.Lr_r(:,2), ...
-                     'linewidth', 2, 'color', handles.Chan2Color);
-                set(handles.handles.RipleyKCh2Ax, 'NextPlot', 'add', 'fontsize', 12);
-                title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCh2, 1), CurrentROI(3), CurrentROI(4));
+                handles.handles.RipleyKCh1Fig = figure('Name','Active ROI Ch1', 'color', [1 1 1]); 
+                handles.handles.RipleyKCh1Ax = axes('parent', handles.handles.RipleyKCh1Fig);
+                plot(handles.handles.RipleyKCh1Ax, handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1), ...
+                    'linewidth', 2, 'color', handles.Chan1Color);
+                set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'add', 'fontsize', 12);
+                title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCh1, 1), CurrentROI(3), CurrentROI(4));
                 title(title_name);
-                xlabel(handles.handles.RipleyKCh2Ax, 'r (nm)', 'fontsize', 12);
-                ylabel(handles.handles.RipleyKCh2Ax, 'L(r)-r', 'fontsize', 12);
-                set(handles.handles.RipleyKCh2Ax, 'NextPlot', 'replace');
-
+                xlabel(handles.handles.RipleyKCh1Ax, 'r (nm)', 'fontsize', 12);
+                ylabel(handles.handles.RipleyKCh1Ax, 'L(r)-r', 'fontsize', 12);
+                set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'replace');
+                
+                % Channel 2
+                if handles.Nchannels == 2
+                    %Ch2
+                    % RipleyK function
+                    [handles.RipleyK.r(:,2), handles.RipleyK.Lr_r(:,2)] = RipleyKFun( xCh2, handles.RipleyK.Area, ...
+                    handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
+                    handles.RipleyK.size_ROI);
+                    % Plot
+                    handles.handles.RipleyKCh2Fig = figure('Name','Active ROI Ch2', 'color', [1 1 1]); 
+                    handles.handles.RipleyKCh2Ax = axes('parent', handles.handles.RipleyKCh2Fig, 'fontsize', 12);
+                    plot(handles.handles.RipleyKCh2Ax, handles.RipleyK.r(:,2), handles.RipleyK.Lr_r(:,2), ...
+                         'linewidth', 2, 'color', handles.Chan2Color);
+                    set(handles.handles.RipleyKCh2Ax, 'NextPlot', 'add', 'fontsize', 12);
+                    title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCh2, 1), CurrentROI(3), CurrentROI(4));
+                    title(title_name);
+                    xlabel(handles.handles.RipleyKCh2Ax, 'r (nm)', 'fontsize', 12);
+                    ylabel(handles.handles.RipleyKCh2Ax, 'L(r)-r', 'fontsize', 12);
+                    set(handles.handles.RipleyKCh2Ax, 'NextPlot', 'replace');
+                end 
+                
+            else % combined data
+                xCombined = handles.CellData{handles.CurrentCellData}(whichPointsInROI, 5:6);
+                if size(xCombined, 1) > handles.RipleyK.MaxSampledPts
+                    rKsubsample = randsample(1:size(xCombined, 1), handles.RipleyK.MaxSampledPts);
+                    xCombined = xCombined(rKsubsample, :);
+                end
+                
+                [handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1)] = RipleyKFun( xCombined, handles.RipleyK.Area, ...
+                    handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
+                    handles.RipleyK.size_ROI);
+                % Plot
+                handles.handles.RipleyKCh1Fig = figure('Name','Active ROI combined data', 'color', [1 1 1]); 
+                handles.handles.RipleyKCh1Ax = axes('parent', handles.handles.RipleyKCh1Fig);
+                plot(handles.handles.RipleyKCh1Ax, handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1), ...
+                    'linewidth', 2, 'color', handles.CombinedColor);
+                set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'add', 'fontsize', 12);
+                title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCombined, 1), CurrentROI(3), CurrentROI(4));
+                title(title_name);
+                xlabel(handles.handles.RipleyKCh1Ax, 'r (nm)', 'fontsize', 12);
+                ylabel(handles.handles.RipleyKCh1Ax, 'L(r)-r', 'fontsize', 12);
+                set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'replace');
             end
-
+           
+            % update GUI
             set(handles.handles.MainFig, 'pointer', 'arrow');
             set(findobj('parent', handles.handles.b_panel), 'enable', 'on');
             drawnow;
             fprintf(1, 'Ripley K test completed.\n');
+            UpdateStatusBar(handles, 'Ripley K test completed.');
             
         catch mError
             
@@ -2051,12 +2109,10 @@ function RipleyKtest(~, ~, ~)
             set(findobj('parent', handles.handles.b_panel), 'enable', 'on');
             drawnow;
             
-            display('Ripley K test exited with errors');
+            disp('Ripley K test exited with errors');
+            UpdateStatusBar(handles, 'Ripley K test exited with errors');
             rethrow(mError);
-            
         end
-
-        
     end
 
     guidata(handles.handles.MainFig, handles);
@@ -2070,70 +2126,82 @@ function DBSCAN_Test(~, ~, ~)
     
     set(handles.handles.MainFig, 'pointer', 'watch');
     set(findobj('parent', handles.handles.b_panel), 'enable', 'off');
+    UpdateStatusBar(handles, 'DBSCAN test on ROI...');
     drawnow;
-    
 
-    % Since which ROI a point falls in is encoded in binary, decode here
-    whichPointsInROI = fliplr(dec2bin(handles.CellData{handles.CurrentCellData}(:,handles.NDataColumns + 1)));
-    whichPointsInROI = whichPointsInROI(:,handles.CurrentROIData) == '1';
-    
-
-    
-    dataCropped = handles.CellData{handles.CurrentCellData}(whichPointsInROI, :);
-    
-    for ch = 1:2
+    for ch = 1:3
         handles.DBSCAN(ch).UseLr_rThresh = false;
         handles.DBSCAN(ch).DoStats = false;
     end
-    returnVal = setDBSCANParameters(handles);
+    returnVal = setDBSCANParameters(handles, false);
     handles = guidata(findobj('Tag', 'PALM GUI'));
     
     if returnVal == 0
         set(handles.handles.MainFig, 'pointer', 'arrow');
         set(findobj('parent', handles.handles.b_panel), 'enable', 'on');
         fprintf(1, 'DBSCAN test cancelled.\n');
+        UpdateStatusBar(handles, 'DBSCAN test cancelled');
         drawnow;
         return;
+        
     elseif returnVal == 1
         
         try
-
-
-            dbscanParams = handles.DBSCAN(1);
-            dbscanParams.Outputfolder = handles.Outputfolder;
-            dbscanParams.CurrentChannel = 1;
+            % Since which ROI a point falls in is encoded in binary, decode here
+            whichPointsInROI = fliplr(dec2bin(handles.CellData{handles.CurrentCellData}(:,handles.NDataColumns + 1)));
+            whichPointsInROI = whichPointsInROI(:,handles.CurrentROIData) == '1';
+            dataCropped = handles.CellData{handles.CurrentCellData}(whichPointsInROI, :);
             
-
-            %DBSCAN function
-            [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 1, 5:6), dbscanParams, ...
-                dataCropped(dataCropped(:,12) == 1, handles.NDataColumns + 2)); 
-            
-            handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == 1),...
-                handles.NDataColumns + 3) = classOut;
-   
-            handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 1, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut);
-            set(handles.handles.ExportResultsButton, 'enable', 'on');
-            
-%             disp(unique(classOut));
-            
-            set(figOut, 'Name', 'DBSCAN Active ROI Ch1')
-
-            if handles.Nchannels == 2
-
-                dbscanParams = handles.DBSCAN(2);
+            if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE)
+                dbscanParams = handles.DBSCAN(1);
                 dbscanParams.Outputfolder = handles.Outputfolder;
-                dbscanParams.CurrentChannel = 2;
+                dbscanParams.CurrentChannel = 1;
                 
-                [~, ~, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 2, 5:6), dbscanParams, ...
-                    dataCropped(dataCropped(:,12) == 2, handles.NDataColumns + 2));
-                
-                
-                handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == 2),...
-                    handles.NDataColumns + 3) = classOut;
-                set(figOut, 'Name', 'DBSCAN Active ROI Ch2')
-                
-                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 2, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut);
+                % Channel 1
+                [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 1, 5:6), dbscanParams, ...
+                    dataCropped(dataCropped(:,12) == 1, handles.NDataColumns + 2)); 
 
+                handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == 1),...
+                    handles.NDataColumns + 3) = classOut;
+
+                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 1, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut);
+                set(handles.handles.ExportResultsButton, 'enable', 'on');
+                
+                set(figOut, 'Name', 'DBSCAN Active ROI Ch1')
+                
+                % Channel 2
+                if handles.Nchannels == 2
+
+                    dbscanParams = handles.DBSCAN(2);
+                    dbscanParams.Outputfolder = handles.Outputfolder;
+                    dbscanParams.CurrentChannel = 2;
+
+                    [~, ~, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 2, 5:6), dbscanParams, ...
+                        dataCropped(dataCropped(:,12) == 2, handles.NDataColumns + 2));
+
+                    handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == 2),...
+                        handles.NDataColumns + 3) = classOut;
+                    set(figOut, 'Name', 'DBSCAN Active ROI Ch2')
+
+                    handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 2, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut);
+                end
+                
+                
+            else % combined data
+                dbscanParams = handles.DBSCAN(3);
+                dbscanParams.Outputfolder = handles.Outputfolder;
+                dbscanParams.CurrentChannel = 3;
+                
+                % Channel 1
+                [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(:, 5:6), dbscanParams, ...
+                    dataCropped(:, handles.NDataColumns + 2)); 
+
+                handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 3) = classOut;
+
+                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 3, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut);
+                set(handles.handles.ExportResultsButton, 'enable', 'on');
+                
+                set(figOut, 'Name', 'DBSCAN Active ROI Combined data')
             end
 
             set(handles.handles.MainFig, 'pointer', 'arrow');
@@ -2143,6 +2211,7 @@ function DBSCAN_Test(~, ~, ~)
             end
             drawnow;
             fprintf(1, 'DBSCAN test completed.\n');
+            UpdateStatusBar(handles, 'DBSCAN test completed');
             
         catch mError
            
@@ -2153,12 +2222,10 @@ function DBSCAN_Test(~, ~, ~)
             end
             drawnow;
             
-            display('DBSCAN text exited with errors');
+            disp('DBSCAN text exited with errors');
+            UpdateStatusBar(handles, 'DBSCAN text exited with errors');
             rethrow(mError);
-            
         end
-            
-        
     end
     
     set(handles.handles.MainFig, 'pointer', 'arrow');
@@ -2166,11 +2233,11 @@ function DBSCAN_Test(~, ~, ~)
     drawnow;
     
     guidata(handles.handles.MainFig, handles);
-    
 end
 
+
 % Load the existing Ripley data or calculate the Ripley
-function RipleyK_All(~, ~, ~)
+function RunRipleyK(~, ~, ~)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
 
@@ -2223,7 +2290,7 @@ function RipleyK_All(~, ~, ~)
             end
             drawnow;
             
-            display('Ripley K processing exited with errors');
+            disp('Ripley K processing exited with errors');
             rethrow(mError);
             
             
@@ -2243,7 +2310,7 @@ function RipleyK_All(~, ~, ~)
 end
 
 % Calculate DBSCAN  for selected data or loaded data
-function DBSCAN_All(~, ~, ~)
+function RunDBSCAN(~, ~, ~)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
 
@@ -2262,7 +2329,7 @@ function DBSCAN_All(~, ~, ~)
         handles.DBSCAN(ch).DoStats = true;
     end
     
-    returnVal = setDBSCANParameters(handles);
+    returnVal = setDBSCANParameters(handles, true);
     handles = guidata(findobj('Tag', 'PALM GUI'));
 
     if returnVal == 0
@@ -2370,7 +2437,7 @@ function DBSCAN_All(~, ~, ~)
                 end % Cell
 
                 if ~all(cellfun(@isempty, Result))
-                    ExportDBSCANDataToExcelFiles(cellROIPair, Result, strcat(handles.Outputfolder, '\DBSCAN Results'), chan);
+                    ExportDBSCANDataToExcelFiles(cellROIPair, Result, strcat(handles.Outputfolder, sprintf('%sDBSCAN Results', filesep)), chan);
                 else
                     fprintf(1, 'All cells and ROIs empty.  Skipping export.\n');
                 end
@@ -2403,10 +2470,10 @@ function DBSCAN_All(~, ~, ~)
             
             assignin('base', 'cellROIPair', cellROIPair);
             assignin('base', 'Result', Result);
-            assignin('base', 'outputFolder', strcat(handles.Outputfolder, '\DBSCAN Results'));
+            assignin('base', 'outputFolder', strcat(handles.Outputfolder, sprintf('%sDBSCAN Results', filesep)));
             assignin('base', 'chan', chan);
             
-            display('DBSCAN processing exited with errors.');
+            disp('DBSCAN processing exited with errors.');
             rethrow(mError);
 
         end
@@ -2434,7 +2501,7 @@ function handles = AppendToROITable(handles, ROIData)
 end
 
 % Calculate DoC  for selected data or loaded data
-function DoC_All(~, ~, ~)
+function RunDoC(~, ~, ~)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
     set(handles.handles.MainFig, 'pointer', 'watch');
@@ -2543,7 +2610,7 @@ function DoC_All(~, ~, ~)
 %             assignin('base', 'ClusterTableCh2', ClusterTableCh2);
 %             assignin('base', 'clusterIDOut', clusterIDOut);
             
-            display('DoC exited with errors');
+            disp('DoC exited with errors');
             rethrow(mError);
             
         end
@@ -2559,6 +2626,13 @@ function DoC_All(~, ~, ~)
     guidata(handles.handles.MainFig, handles);
 
 end
+
+
+% Calculate PoC  for selected data or loaded data
+function RunPoC(~, ~, ~)
+    %TODO
+end
+
 
 function handles = AssignDoCDataToPoints(handles, clusterIDOut)
 
