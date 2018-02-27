@@ -19,6 +19,12 @@ function UpdateStatusBar(handles, str)
     statusbar(handles.handles.MainFig, str);
 end
 
+function CreateDir(path)
+    if ~(exist(path, 'dir') == 7)
+        mkdir(path);
+    end
+end
+
 function DoCGUIInitialize(varargin)
 
     figObj = findobj('Tag', 'PALM GUI');
@@ -2243,6 +2249,7 @@ function RunRipleyK(~, ~, ~)
 
     set(handles.handles.MainFig, 'pointer', 'watch');
     set(get(handles.handles.b_panel, 'children'), 'enable', 'off');
+    UpdateStatusBar(handles, 'Running RippleK on ROI...');
     drawnow;
 
     returnVal = setRipleyKParameters(handles); % re-set RipleyK parameters if desired
@@ -2255,6 +2262,7 @@ function RunRipleyK(~, ~, ~)
         if handles.Nchannels == 1
             set(handles.handles.hDoC_All1, 'enable', 'off');
         end
+        UpdateStatusBar(handles, 'RippleK on ROI cancelled');
         drawnow;
         return
         
@@ -2269,17 +2277,20 @@ function RunRipleyK(~, ~, ~)
             % Moving here to create more reasonable workflow
             % create the output folder 'RipleyKGUI_Result
             Fun_OutputFolder_name = fullfile(handles.Outputfolder, 'RipleyKGUI_Result');
-            if ~(exist(Fun_OutputFolder_name, 'dir') == 7)
-                mkdir(Fun_OutputFolder_name);
+            CreateDir(Fun_OutputFolder_name);
+            CreateDir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots'));
+            CreateDir(fullfile(Fun_OutputFolder_name, 'RipleyK Results'));
+            if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE)
                 mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', 'Ch1'));
                 mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', 'Ch2'));
                 mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Results', 'Ch1'));
                 mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Results', 'Ch2'));
+            else
+                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', 'Combined'));
+                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Results', 'Combined'));
             end
 
-            [~] = RipleyKHandler(handles, handles.RipleyK.Start, ...
-                handles.RipleyK.End, handles.RipleyK.Step, handles.RipleyK.MaxSampledPts, ...
-                handles.Chan1Color, handles.Chan2Color, Fun_OutputFolder_name);
+            [~] = RipleyKHandler(handles, Fun_OutputFolder_name);
             
         catch mError
            
@@ -2291,11 +2302,10 @@ function RunRipleyK(~, ~, ~)
             drawnow;
             
             disp('Ripley K processing exited with errors');
+            UpdateStatusBar(handles, 'Ripley K processing exited with errors');
             rethrow(mError);
             
-            
         end
-
     end
 
     set(handles.handles.MainFig, 'pointer', 'arrow');
@@ -2303,6 +2313,7 @@ function RunRipleyK(~, ~, ~)
     if handles.Nchannels == 1
         set(handles.handles.hDoC_All1, 'enable', 'off');
     end
+    UpdateStatusBar(handles, 'RippleK on ROI completed!');
     drawnow;
     
     guidata(handles.handles.MainFig, handles);
