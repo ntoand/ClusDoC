@@ -81,6 +81,11 @@ try
             end
 
         end
+        
+        dirname = sprintf('Ch%d', DBSCANParams.CurrentChannel);
+        if(DBSCANParams.IsCombined)
+         dirname = 'Combined';
+        end
        
 
         % Calculate Lr for cumulated channels ch1
@@ -294,7 +299,7 @@ try
              set(ax1, 'box', 'on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
              set(fig1, 'Color', [1 1 1], 'Tag', 'ClusDoC')
              if printOutFig
-                print(fullfile(DBSCANParams.Outputfolder, printOutFigDest, sprintf('Ch%d', DBSCANParams.CurrentChannel), 'Cluster maps', Name), fig1, '-dtiff');
+                print(fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cluster maps', Name), fig1, '-dtiff');
                 close(fig1);
              end
 
@@ -335,7 +340,7 @@ try
 
             Name = strcat('Cell',num2str(cellNum),'_Region',num2str(ROINum), '_Density_map.tif');
             print(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
-                sprintf('Ch%d', DBSCANParams.CurrentChannel), 'Cluster density maps', Name), fig2, '-dtiff');
+                dirname, 'Cluster density maps', Name), fig2, '-dtiff');
             close(fig2);
 
             Norm_Density = Density./max(Density(:));
@@ -362,7 +367,7 @@ try
 
             Name = strcat('Cell',num2str(cellNum),'_Region',num2str(ROINum), '_Norm_Density_map.tif');
             print(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
-                sprintf('Ch%d', DBSCANParams.CurrentChannel), 'Cluster density maps', Name), fig3, '-dtiff');
+                dirname, 'Cluster density maps', Name), fig3, '-dtiff');
             close(fig3);
 
         end
@@ -441,7 +446,7 @@ end
 
 function colorOut = rgb(a, b, c)
 
-colorOut = [a, b, c]/255;
+    colorOut = [a, b, c]/255;
 
 end
 

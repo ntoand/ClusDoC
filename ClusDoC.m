@@ -354,7 +354,7 @@ function initializeParameters(varargin)
     % Initialize some global settings
     handles.Chan1Color = [46, 204, 113]/255; % Flat UI Emerald
     handles.Chan2Color = [231, 76, 60]/255; % Flat UI Alizarin
-    handles.CombinedColor = [0, 0, 0]/255;
+    handles.CombinedColor = [0, 0, 255]/255;
     handles.UnselectedROIColor = [142, 68, 173]/255; % Flat UI Peter River
     handles.ROIColor = [40, 142, 230]/255; % Flat UI Amethyst
     
@@ -2162,6 +2162,7 @@ function DBSCAN_Test(~, ~, ~)
                 dbscanParams = handles.DBSCAN(1);
                 dbscanParams.Outputfolder = handles.Outputfolder;
                 dbscanParams.CurrentChannel = 1;
+                dbscanParams.IsCombined = false;
                 
                 % Channel 1
                 [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 1, 5:6), dbscanParams, ...
@@ -2181,6 +2182,7 @@ function DBSCAN_Test(~, ~, ~)
                     dbscanParams = handles.DBSCAN(2);
                     dbscanParams.Outputfolder = handles.Outputfolder;
                     dbscanParams.CurrentChannel = 2;
+                    dbscanParams.IsCombined = false;
 
                     [~, ~, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 2, 5:6), dbscanParams, ...
                         dataCropped(dataCropped(:,12) == 2, handles.NDataColumns + 2));
@@ -2197,6 +2199,7 @@ function DBSCAN_Test(~, ~, ~)
                 dbscanParams = handles.DBSCAN(3);
                 dbscanParams.Outputfolder = handles.Outputfolder;
                 dbscanParams.CurrentChannel = 3;
+                dbscanParams.IsCombined = true;
                 
                 % Channel 1
                 [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(:, 5:6), dbscanParams, ...
@@ -2320,22 +2323,20 @@ function RunRipleyK(~, ~, ~)
     
 end
 
-% Calculate DBSCAN  for selected data or loaded data
+
+% Calculate DBSCAN for selected data or loaded data
 function RunDBSCAN(~, ~, ~)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
 
     set(handles.handles.MainFig, 'pointer', 'watch');
     set(get(handles.handles.b_panel, 'children'), 'enable', 'off');
+    UpdateStatusBar(handles, 'Running DBSCAN on ROI...');
     drawnow;
 
-    if ~(exist(strcat(handles.Outputfolder, '\DBSCAN Results'), 'dir') == 7)
-        mkdir(fullfile(handles.Outputfolder, 'DBSCAN Results'));
-    end
+    CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results'));
 
-%     [AllDataCh1, AllDataCh2] = Extract_Ch1_Ch2(ROIData);
-
-    for ch = 1:2
+    for ch = 1:3
         handles.DBSCAN(ch).UseLr_rThresh = true;
         handles.DBSCAN(ch).DoStats = true;
     end
@@ -2350,6 +2351,7 @@ function RunDBSCAN(~, ~, ~)
         if handles.Nchannels == 1
             set(handles.handles.hDoC_All1, 'enable', 'off');
         end
+        UpdateStatusBar(handles, 'DBSCAN on ROI cancelled!');
         drawnow;
         return;
 
@@ -2357,23 +2359,30 @@ function RunDBSCAN(~, ~, ~)
         
         % Do DBSCAN on each cell, ROI, and channel
         % Can parfor this?
-        
-        try
-
-
-    
+        try   
             
-            for chan = 1:handles.Nchannels
+            isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
+            if(isCombined)
+                channels = 3;  % [3]
+            else
+                channels = 1:handles.Nchannels; % e,g, [1, 2]
+            end
+            
+            for chan = channels
+                
+                if(isCombined)
+                    dirname = 'Combined';
+                else
+                    dirname = sprintf('Ch%d', chan);
+                end
                 
                 dbscanParams = handles.DBSCAN(chan);
                 dbscanParams.Outputfolder = handles.Outputfolder;
+                dbscanParams.IsCombined = isCombined;
                 
-                
-                if ~exist(fullfile(handles.Outputfolder, 'DBSCAN Results', sprintf('Ch%d', chan)),'dir')
-                    mkdir(fullfile(handles.Outputfolder, 'DBSCAN Results', sprintf('Ch%d', chan)));
-                    mkdir(fullfile(handles.Outputfolder, 'DBSCAN Results', sprintf('Ch%d', chan), 'Cluster maps'));
-                    mkdir(fullfile(handles.Outputfolder, 'DBSCAN Results', sprintf('Ch%d', chan), 'Cluster density maps'));
-                end
+                CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname));
+                CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname, 'Cluster maps'));
+                CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname, 'Cluster density maps'));
                 
                 dbscanParams.CurrentChannel = chan;
                 
@@ -2381,6 +2390,8 @@ function RunDBSCAN(~, ~, ~)
                     clusterColor = handles.Chan1Color;
                 elseif chan == 2
                     clusterColor = handles.Chan2Color;
+                else
+                    clusterColor = handles.CombinedColor;
                 end
                 
                 cellROIPair = [];    
@@ -2390,10 +2401,9 @@ function RunDBSCAN(~, ~, ~)
                 ClusterSmoothTable = cell(max(cell2mat(cellfun(@length, handles.ROICoordinates, 'uniformoutput', false))), ...
                     size(handles.CellData, 1));
             
-                for c = 1:size(handles.CellData, 1);
+                for c = 1:size(handles.CellData, 1)
 
-
-                    for roiInc = 1:length(handles.ROICoordinates{c});
+                    for roiInc = 1:length(handles.ROICoordinates{c})
 
                         roi = handles.ROICoordinates{c}{roiInc};
 
@@ -2402,7 +2412,6 @@ function RunDBSCAN(~, ~, ~)
                         whichPointsInROI = whichPointsInROI(:,roiInc) == '1';
 
                         dataCropped = handles.CellData{c}(whichPointsInROI, :);
-
 
                         if ~isempty(dataCropped)
                             
@@ -2413,20 +2422,24 @@ function RunDBSCAN(~, ~, ~)
                             %         display2 = varargin{4};
                             %         clusterColor = varargin{5}
                             
-                            [~, ClusterSmoothTable{roiInc, c}, ~, classOut, ~, ~, ~, Result{roiInc, c}] = ...
-                                DBSCANHandler(dataCropped(dataCropped(:,12) == chan, 5:6), dbscanParams, c, roiInc, ...
-                                true, true, clusterColor, dataCropped(dataCropped(:,12) == chan, handles.NDataColumns + 2));
-
-%                             disp(Result)
+                            if(~isCombined)
+                                [~, ClusterSmoothTable{roiInc, c}, ~, classOut, ~, ~, ~, Result{roiInc, c}] = ...
+                                    DBSCANHandler(dataCropped(dataCropped(:,12) == chan, 5:6), dbscanParams, c, roiInc, ...
+                                    true, true, clusterColor, dataCropped(dataCropped(:,12) == chan, handles.NDataColumns + 2));
+                                
+                                handles.CellData{c}(whichPointsInROI & (handles.CellData{c}(:,12) == chan), handles.NDataColumns + 3) = classOut;
                             
-                            handles.CellData{c}(whichPointsInROI & (handles.CellData{c}(:,12) == chan), handles.NDataColumns + 3) = classOut;
+                            else
+                                [~, ClusterSmoothTable{roiInc, c}, ~, classOut, ~, ~, ~, Result{roiInc, c}] = ...
+                                    DBSCANHandler(dataCropped(:, 5:6), dbscanParams, c, roiInc, ...
+                                    true, true, clusterColor, dataCropped(:, handles.NDataColumns + 2));
+                                
+                                %Check INOUT.md for details
+                                handles.CellData{c}(whichPointsInROI, handles.NDataColumns + 9) = classOut;
+                            end
                             
                             % Result is stats per ROI
                             % ClusterSmoothTable is stats per cluster
-                            
-                            
-%                             handles = AppendToROITable(handles, Result);
-                            
                             cellROIPair = [cellROIPair; c, roiInc, roi(1,1), roi(1,2), polyarea(roi(:,1), roi(:,2))];
                             
                             handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, chan, c, roiInc, ClusterSmoothTable{roiInc, c}, classOut);
@@ -2434,12 +2447,10 @@ function RunDBSCAN(~, ~, ~)
                         else
                             % Have chosen an empty region as ROI
                             
-                            fprintf(1, 'Cell %d - ROI %d is empty.  Skipping.\n', c, roiInc);
-                            
+                            fprintf(1, 'Cell %d - ROI %d is empty.  Skipping.\n', c, roiInc);                
                             ClusterSmoothTable{roiInc, c} = [];
                             classOut = [];
                             Result{roiInc, c} = [];
-
                         end
 
                     drawnow;
@@ -2448,27 +2459,18 @@ function RunDBSCAN(~, ~, ~)
                 end % Cell
 
                 if ~all(cellfun(@isempty, Result))
-                    ExportDBSCANDataToExcelFiles(cellROIPair, Result, strcat(handles.Outputfolder, sprintf('%sDBSCAN Results', filesep)), chan);
+                    ExportDBSCANDataToExcelFiles(cellROIPair, Result, strcat(handles.Outputfolder, sprintf('%sDBSCAN Results', filesep)), chan, isCombined);
                 else
                     fprintf(1, 'All cells and ROIs empty.  Skipping export.\n');
                 end
                 
-                if chan == 1
-                    ClusterTableChan1 = ClusterSmoothTable;
-                elseif chan == 2
-                    ClusterTableChan2 = ClusterSmoothTable;
-                end
-                
-                
-                save(fullfile(handles.Outputfolder, 'DBSCAN Results', sprintf('Ch%d', chan), ...
+                save(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname, ...
                                     'DBSCAN_Cluster_Result.mat'),'ClusterSmoothTable','Result','-v7.3');
                             
             end % Channel
             
             set(handles.handles.ExportResultsButton, 'enable', 'on');
-            
             guidata(handles.handles.MainFig, handles);
-%             handles.ClusterTable = AppendToClusterTable(ClusterTableChan1, ClusterTableChan2);
                             
         catch mError
             
@@ -2479,24 +2481,24 @@ function RunDBSCAN(~, ~, ~)
             end
             drawnow;
             
-            assignin('base', 'cellROIPair', cellROIPair);
-            assignin('base', 'Result', Result);
-            assignin('base', 'outputFolder', strcat(handles.Outputfolder, sprintf('%sDBSCAN Results', filesep)));
-            assignin('base', 'chan', chan);
-            
+            %Disabled because these parameters are not avai here!
+            %assignin('base', 'cellROIPair', cellROIPair);
+            %assignin('base', 'Result', Result);
+            %assignin('base', 'outputFolder', strcat(handles.Outputfolder, sprintf('%sDBSCAN Results', filesep)));
+            %assignin('base', 'chan', chan);
             disp('DBSCAN processing exited with errors.');
+            UpdateStatusBar(handles, 'DBSCAN processing exited with errors');
             rethrow(mError);
-
         end
-        
         
     end % returnVal
 
     set(handles.handles.MainFig, 'pointer', 'arrow');
     set(get(handles.handles.b_panel, 'children'), 'enable', 'on');
-	if handles.Nchannels == 1
+	if (handles.Nchannels == 1)
         set(handles.handles.hDoC_All1, 'enable', 'off');
-	end
+    end
+    UpdateStatusBar(handles, 'DBSCAN on ROI completed!');
     drawnow;
     
     guidata(handles.handles.MainFig, handles);
@@ -2677,6 +2679,8 @@ function handles = AssignDoCDataToPoints(handles, clusterIDOut)
 end
 
 function ExportToTextPush(varargin)
+
+    %TODO: update export columns
 
     handles = guidata(findobj('tag', 'PALM GUI'));
     

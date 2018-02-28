@@ -1,4 +1,4 @@
-function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan)
+function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan, isCombined)
 
     % Formerly Final_Result_DBSCAN_GUIV2
     % Extracts and exports Results table into Excel format
@@ -31,10 +31,18 @@ function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan)
         
         disp('Export')
         disp(chan);
+        
+        if(isCombined)
+            dirname = 'Combined';
+        else
+            dirname = sprintf('Ch%d', chan);
+        end
 
-        xlswrite(fullfile(outputFolder, 'DBSCAN Results.xls'), cellROIPair, sprintf('Chan%d', chan), 'A2');
-        xlswrite(fullfile(outputFolder, 'DBSCAN Results.xls'), HeaderArray, sprintf('Chan%d', chan), 'A1');
-        xlswrite(fullfile(outputFolder, 'DBSCAN Results.xls'), Matrix_Result, sprintf('Chan%d', chan), 'G2');
+        if ispc
+            xlswrite(fullfile(outputFolder, 'DBSCAN Results.xls'), cellROIPair, dirname, 'A2');
+            xlswrite(fullfile(outputFolder, 'DBSCAN Results.xls'), HeaderArray, dirname, 'A1');
+            xlswrite(fullfile(outputFolder, 'DBSCAN Results.xls'), Matrix_Result, dirname, 'G2');
+        end
         
     catch 
         % Catch error for xlswrite that exists on some machines
@@ -47,7 +55,11 @@ function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan)
         assignin('base', 'Matrix_Result', Matrix_Result);
         
         matOut = [cellROIPair, nan(size(cellROIPair, 1), 1), Matrix_Result];
-        fID = fopen(fullfile(outputFolder, sprintf('DBSCAN Results Chan%d.txt', chan)), 'w+');
+        if(isCombined)
+            fID = fopen(fullfile(outputFolder, 'DBSCAN Results Combined.txt'), 'w+');
+        else
+            fID = fopen(fullfile(outputFolder, sprintf('DBSCAN Results Chan%d.txt', chan)), 'w+');
+        end
         fprintf(fID, strcat(repmat('%s\t', 1, length(HeaderArray)-1), '%s\r\n'), HeaderArray{:});
         
         fmtString = strcat(repmat('%f\t', 1, length(HeaderArray)-1), '%f\r\n');
