@@ -285,6 +285,15 @@ function DoCGUIInitialize(varargin)
     handles.handles.ResultsExplorerButton = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Results Explorer',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @ResultsExplorerPush, 'Tag', 'ResultsExplorer', 'enable', 'off', 'visible', 'off');
     
+    % Export checkbox
+    h1=butt_height/2;
+    w1=1-2*space2;
+    xbutton=space2;
+    ybutton=ybutton-h1-space1;
+    handles.handles.ExportResultsCheckbox = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'checkbox', 'String', 'Export only points in active ROI',...
+        'Value', 0, 'Position', [xbutton ybutton w1 h1], 'Callback', @ExportToTextCheckBox, 'Tag', 'ExportToTextCheckBox', ...
+        'backgroundcolor', [1 1 1], 'fontsize', 10);
+    
     % Button ExporttoText
     h1=butt_height/2;
     w1=1-2*space2;
@@ -321,7 +330,6 @@ function DoCGUIInitialize(varargin)
 
     guidata(fig1, handles);
     initializeParameters();
-    
     
     UpdateStatusBar(handles, 'GUI initialized'); 
     
@@ -405,6 +413,10 @@ function OutputTextEdit(varargin)
 end
 
 function CoordinatesEdit(varargin)
+
+end
+
+function ExportToTextCheckBox(varargin)
 
 end
 
@@ -1690,92 +1702,100 @@ end
 % Pop-up window to set DoC parameters
 function returnValue = setDoCParameters(handles)
 
-   handles.handles.DoCSettingsFig = figure();
-   set(handles.handles.DoCSettingsFig, 'Tag', 'ClusDoC');
+    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
+
+    handles.handles.DoCSettingsFig = figure();
+    set(handles.handles.DoCSettingsFig, 'Tag', 'ClusDoC');
     resizeFig(handles.handles.DoCSettingsFig, [510 306]);
     set(handles.handles.DoCSettingsFig, 'toolbar', 'figure', 'menubar', 'none', ...
         'name', 'DoC Parameters');
     
     ch = 1;
+    if(isCombined)
+        ch = 3;
+    end
+    
+    SUP = 40; %shift control up compared to v1.0.0
+    SUP2 = 30;
    
     handles.handles.DoCSettingsTitleText(2) = uicontrol('Style', 'text', ...
         'String', '_____________________', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 197 200 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+        'Position', [0 197+SUP 200 20], 'horizontalalignment', 'center', 'Fontsize', 10);
 
 	handles.handles.DoCSettingsTitleText(1) = uicontrol('Style', 'text', ...
         'String', 'Degree of Colocalization Parameters', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 207 200 35], 'horizontalalignment', 'center', 'Fontsize', 10);
+        'Position', [0 207+SUP 200 35], 'horizontalalignment', 'center', 'Fontsize', 10);
     
     %%%%%%
     
     handles.handles.DoCSettingsText(1) = uicontrol('Style', 'text', ...
         'String', 'L(r) - r radius (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 160 100 20], 'horizontalalignment', 'right');
+        'Position', [0 160+SUP2 100 20], 'horizontalalignment', 'right');
     
     handles.handles.DoCSettingsText(2) = uicontrol('Style', 'text', ...
         'String', 'Rmax (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 130 100 20], 'horizontalalignment', 'right');
+        'Position', [0 130+SUP2 100 20], 'horizontalalignment', 'right');
     
     handles.handles.DoCSettingsText(3) = uicontrol('Style', 'text', ...
         'String', 'Step (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 100 100 20], 'horizontalalignment', 'right');
+        'Position', [0 100+SUP2 100 20], 'horizontalalignment', 'right');
     
     handles.handles.DoCSettingsText(4) = uicontrol('Style', 'text', ...
         'String', 'Colocalization Threshold:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 60 100 30], 'horizontalalignment', 'right');
+        'Position', [0 60+SUP2 100 30], 'horizontalalignment', 'right');
     
 	handles.handles.DoCSettingsText(5) = uicontrol('Style', 'text', ...
         'String', 'Min Coloc''d Points/Cluster:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 20 100 30], 'horizontalalignment', 'right');
+        'Position', [0 20+SUP2 100 30], 'horizontalalignment', 'right');
     
 	%%%%%%%%%%
     
     handles.handles.DoCSettingsEdit(1) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DoC.Lr_rRad), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 162 60 20]);
+        'Position', [120 162+SUP2 60 20]);
     
     handles.handles.DoCSettingsEdit(2) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DoC.Rmax), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 132 60 20]);
+        'Position', [120 132+SUP2 60 20]);
     
     handles.handles.DoCSettingsEdit(3) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DoC.Step), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 102 60 20]);
+        'Position', [120 102+SUP2 60 20]);
     
     handles.handles.DoCSettingsEdit(4) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DoC.ColoThres), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 67 60 20]);
+        'Position', [120 67+SUP2 60 20]);
     
 	handles.handles.DoCSettingsEdit(5) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DoC.NbThresh), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 32 60 20]);
+        'Position', [120 32+SUP2 60 20]);
     
     
     %%%%%%%%%%%%%%%
     % DoC - DBSCAN settings
     
-	handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
-        'String', '_____________________', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 215 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-
+    str = 'DBSCAN Parameters';
+    if(isCombined)
+        str = 'DBSCAN Parameters for combined data';
+    end
 	handles.handles.DBSCANSettingsTitleText(1) = uicontrol('Style', 'text', ...
-        'String', 'DBSCAN Parameters', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 220 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+        'String', str, 'parent', handles.handles.DoCSettingsFig,...
+        'Position', [260 220+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
     
     %%%%%%%%
     if verLessThan('matlab', '8.4');
-        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.2 .83 .6 .11],...
+        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.55 220/306 .4 .11],...
             'SelectionChangeFcn', @changeDBSCANChannel);
     else
-        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.2 .83 .6 .11],...
+        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.55 220/306 .4 .11],...
             'SelectionChangedFcn', @changeDBSCANChannel);
     end
                   
     handles.handles.DBSCANChannelSelect(1) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-        'Style', 'radiobutton', 'String', 'Ch 1', 'position', [69 7 50 20]);
+        'Style', 'radiobutton', 'String', 'Ch 1', 'position', [39 7 50 20]);
     
     handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-        'Style', 'radiobutton', 'String', 'Ch 2', 'position', [190 7 50 20]);
+        'Style', 'radiobutton', 'String', 'Ch 2', 'position', [130 7 50 20]);
     
     if verLessThan('matlab', '8.4')
         
@@ -1794,6 +1814,17 @@ function returnValue = setDoCParameters(handles)
             handles.handles.DBSCANChannelSelect(2).Enable = 'off';
         end
     end
+    
+    if(isCombined)
+        if verLessThan('matlab', '8.4')
+            set(handles.handles.DBSCANChannelToggle, 'Visible', 'off'); 
+        else
+            handles.handles.DBSCANChannelToggle.Visible = 'off';
+        end 
+        handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
+            'String', '_____________________', 'parent', handles.handles.DoCSettingsFig,...
+            'Position', [260 197+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+    end
         
     %%%%%%%%
     
@@ -1802,72 +1833,72 @@ function returnValue = setDoCParameters(handles)
     
     handles.handles.DBSCANSettingsText(1) = uicontrol('Style', 'text', ...
         'String', 'Epsilon (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 157 110 20], 'horizontalalignment', 'right');
+        'Position', [260 157+SUP2 110 20], 'horizontalalignment', 'right');
     
     handles.handles.DBSCANSettingsText(2) = uicontrol('Style', 'text', ...
         'String', 'minPts:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 132 110 20], 'horizontalalignment', 'right');
+        'Position', [260 132+SUP2 110 20], 'horizontalalignment', 'right');
     
     handles.handles.DBSCANSettingsText(3) = uicontrol('Style', 'text', ...
         'String', 'Plot Cutoff:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 107 110 20], 'horizontalalignment', 'right');
+        'Position', [260 107+SUP2 110 20], 'horizontalalignment', 'right');
     
     handles.handles.DBSCANSettingsText(4) = uicontrol('Style', 'text', ...
         'String', 'Processing Threads:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 82 110 20], 'horizontalalignment', 'right');
+        'Position', [260 82+SUP2 110 20], 'horizontalalignment', 'right');
     
     handles.handles.DBSCANSettingsText(5) = uicontrol('Style', 'text', ...
         'String', 'L(r) - r Radius (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 57 110 20], 'horizontalalignment', 'right');
+        'Position', [260 57+SUP2 110 20], 'horizontalalignment', 'right');
     
     handles.handles.DBSCANSettingsText(6) = uicontrol('Style', 'text', ...
         'String', 'Use', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [450 57 30 20], 'horizontalalignment', 'right');
+        'Position', [450 57+SUP2 30 20], 'horizontalalignment', 'right');
     
     handles.handles.DBSCANSettingsText(7) = uicontrol('Style', 'text', ...
         'String', 'Smooth Radius (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 32 110 20], 'horizontalalignment', 'right');
+        'Position', [260 32+SUP2 110 20], 'horizontalalignment', 'right');
     
 	handles.handles.DBSCANSettingsText(8) = uicontrol('Style', 'text', ...
         'String', 'Calc Stats:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 6 110 20], 'horizontalalignment', 'right');
+        'Position', [260 6+SUP2 110 20], 'horizontalalignment', 'right');
     
 	%%%%%%%%%%
     
     handles.handles.DBSCANSettingsEdit(1) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DBSCAN(ch).epsilon), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 161 60 20]);
+        'Position', [375 161+SUP2 60 20]);
     
     handles.handles.DBSCANSettingsEdit(2) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DBSCAN(ch).minPts), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 136 60 20]);
+        'Position', [375 136+SUP2 60 20]);
     
     handles.handles.DBSCANSettingsEdit(3) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DBSCAN(ch).Cutoff), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 111 60 20]);
+        'Position', [375 111+SUP2 60 20]);
     
     handles.handles.DBSCANSettingsEdit(4) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DBSCAN(ch).threads), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 86 60 20]);
+        'Position', [375 86+SUP2 60 20]);
     
     handles.handles.DBSCANSettingsEdit(5) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 61 60 20]);
+        'Position', [375 61+SUP2 60 20]);
     
     handles.handles.DBSCANSettingsEdit(6) = uicontrol('Style', 'edit', ...
         'String', num2str(handles.DBSCAN(ch).SmoothingRad), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 36 60 20]);
+        'Position', [375 36+SUP2 60 20]);
     
     set(handles.handles.DBSCANSettingsEdit, 'Callback', @DoCCheckEditBox);
     
     %%%%%%
     
     handles.handles.DBSCANSetToggle = uicontrol('Style', 'checkbox', ...
-        'Value', handles.DBSCAN(ch).UseLr_rThresh, 'position', [485 60 20 20], ...
+        'Value', handles.DBSCAN(ch).UseLr_rThresh, 'position', [485 60+SUP2 20 20], ...
         'callback', @DBSCANUseThreshold);
     
 	handles.handles.DBSCANDoStatsToggle = uicontrol('Style', 'checkbox', ...
-        'Value', handles.DBSCAN(ch).DoStats, 'position', [375 10 20 20]);
+        'Value', handles.DBSCAN(ch).DoStats, 'position', [375 10+SUP2 20 20]);
 
 
     %%%%%%
@@ -1875,7 +1906,7 @@ function returnValue = setDoCParameters(handles)
     
     handles.handles.DoCSettingsButton = uicontrol('Style', 'pushbutton', ...
         'String', 'Continue', 'parent', handles.handles.DoCSettingsFig, ...
-        'Position', [425 2 85 30], 'Callback', @DoCSetAndContinue);
+        'Position', [425 4 85 30], 'Callback', @DoCSetAndContinue);
 
     set(handles.handles.DoCSettingsFig, 'CloseRequestFcn', @DoCCloseOutWindow);
     
@@ -2167,11 +2198,11 @@ function DBSCAN_Test(~, ~, ~)
                 % Channel 1
                 [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 1, 5:6), dbscanParams, ...
                     dataCropped(dataCropped(:,12) == 1, handles.NDataColumns + 2)); 
-
+              
                 handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == 1),...
                     handles.NDataColumns + 3) = classOut;
 
-                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 1, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut);
+                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 1, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut, dataCropped(:,12));
                 set(handles.handles.ExportResultsButton, 'enable', 'on');
                 
                 set(figOut, 'Name', 'DBSCAN Active ROI Ch1')
@@ -2184,15 +2215,17 @@ function DBSCAN_Test(~, ~, ~)
                     dbscanParams.CurrentChannel = 2;
                     dbscanParams.IsCombined = false;
 
-                    [~, ~, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 2, 5:6), dbscanParams, ...
+                    [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 2, 5:6), dbscanParams, ...
                         dataCropped(dataCropped(:,12) == 2, handles.NDataColumns + 2));
-
+          
                     handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == 2),...
                         handles.NDataColumns + 3) = classOut;
                     set(figOut, 'Name', 'DBSCAN Active ROI Ch2')
 
-                    handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 2, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut);
+                    handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 2, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut, dataCropped(:,12));
                 end
+                
+                handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 9) = 0;
                 
                 
             else % combined data
@@ -2201,13 +2234,12 @@ function DBSCAN_Test(~, ~, ~)
                 dbscanParams.CurrentChannel = 3;
                 dbscanParams.IsCombined = true;
                 
-                % Channel 1
                 [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(:, 5:6), dbscanParams, ...
                     dataCropped(:, handles.NDataColumns + 2)); 
+           
+                handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 9) = classOut;
 
-                handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 3) = classOut;
-
-                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 3, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut);
+                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 3, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut, dataCropped(:,12));
                 set(handles.handles.ExportResultsButton, 'enable', 'on');
                 
                 set(figOut, 'Name', 'DBSCAN Active ROI Combined data')
@@ -2428,6 +2460,8 @@ function RunDBSCAN(~, ~, ~)
                                     true, true, clusterColor, dataCropped(dataCropped(:,12) == chan, handles.NDataColumns + 2));
                                 
                                 handles.CellData{c}(whichPointsInROI & (handles.CellData{c}(:,12) == chan), handles.NDataColumns + 3) = classOut;
+                                
+                                handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 9) = 0;
                             
                             else
                                 [~, ClusterSmoothTable{roiInc, c}, ~, classOut, ~, ~, ~, Result{roiInc, c}] = ...
@@ -2442,7 +2476,7 @@ function RunDBSCAN(~, ~, ~)
                             % ClusterSmoothTable is stats per cluster
                             cellROIPair = [cellROIPair; c, roiInc, roi(1,1), roi(1,2), polyarea(roi(:,1), roi(:,2))];
                             
-                            handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, chan, c, roiInc, ClusterSmoothTable{roiInc, c}, classOut);
+                            handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, chan, c, roiInc, ClusterSmoothTable{roiInc, c}, classOut, dataCropped(:,12));
 
                         else
                             % Have chosen an empty region as ROI
@@ -2519,21 +2553,27 @@ function RunDoC(~, ~, ~)
     handles = guidata(findobj('Tag', 'PALM GUI'));
     set(handles.handles.MainFig, 'pointer', 'watch');
     set(get(handles.handles.b_panel, 'children'), 'enable', 'off');
+    UpdateStatusBar(handles, 'Running DoC on ROI...');
     drawnow;
     
-    if ~(exist(strcat(handles.Outputfolder, '\Clus-DoC Results'), 'dir') == 7)
-        mkdir(fullfile(handles.Outputfolder, 'Clus-DoC Results'));
-        mkdir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DoC histograms'));
-        mkdir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results'));
-        mkdir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch1'));
-        mkdir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch1', 'Cluster maps'));
-        mkdir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch2'));
-        mkdir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch2', 'Cluster maps'));
-        mkdir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DoC Statistics and Plots'));
+    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
+    
+    
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DoC histograms'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results'));
+    if(~isCombined)
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch1'));
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch1', 'Cluster maps'));
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch2'));
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch2', 'Cluster maps'));
+    else
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Combined'));
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Combined', 'Cluster maps'));
     end
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DoC Statistics and Plots'));
     
     % Input parameters for calculating DoC scores for all points
-
 	returnVal = setDoCParameters(handles);
         
     if returnVal == 0
@@ -2554,10 +2594,10 @@ function RunDoC(~, ~, ~)
             % Should be only place that DBSCANparams are passed both
             % channels together
             dbscanParams = handles.DBSCAN;
-            dbscanParams(1).Outputfolder = handles.Outputfolder;
-            dbscanParams(1).DoCThreshold = handles.DoC.ColoThres;
-            dbscanParams(2).Outputfolder = handles.Outputfolder;
-            dbscanParams(2).DoCThreshold = handles.DoC.ColoThres;
+            for i = 1:3
+                dbscanParams(i).Outputfolder = handles.Outputfolder;
+                dbscanParams(i).DoCThreshold = handles.DoC.ColoThres;
+            end
             
             % cd to DoC_Result
             
@@ -2570,36 +2610,45 @@ function RunDoC(~, ~, ~)
             % DBSCAN_Radius=20 - epsilon
             % DBSCAN_Nb_Neighbor=3; - minPts ;
             % threads = 2
-                    
-            [handles.CellData, DensityROI] = DoCHandler(handles.ROICoordinates, handles.CellData, ... 
+            
+            UpdateStatusBar(handles, 'Calculating DoC...');
+            [handles.CellData, DensityROI] = DoCHandler(handles.ROICoordinates, handles.CellData, ...
                 handles.DoC.Lr_rRad, handles.DoC.Rmax, handles.DoC.Step, ...
                 handles.Chan1Color, handles.Chan2Color, handles.Outputfolder, handles.NDataColumns);
             
             %%%%%%%%%%%%%%%
             % Plotting, segmentation, and statistics start here
             
-
+            UpdateStatusBar(handles, 'Processing DoC results...');
             ResultTable = ProcessDoCResults(handles.CellData, handles.NDataColumns, handles.ROICoordinates, ...
-                DensityROI, strcat(handles.Outputfolder, '\Clus-DoC Results'), handles.DoC.ColoThres);
-
+                DensityROI, fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.DoC.ColoThres);
+            
             
             % Run DBSCAN on data used for DoC analysis
-            [ClusterTableCh1, ClusterTableCh2, clusterIDOut, handles.ClusterTable] = DBSCANonDoCResults(handles.CellData, handles.ROICoordinates, ...
-                strcat(handles.Outputfolder, '\Clus-DoC Results'), handles.Chan1Color, handles.Chan2Color, dbscanParams, handles.NDataColumns);
+            UpdateStatusBar(handles, 'DBSCAN on DoC results...');
+            [ClusterTableCh1, ClusterTableCh2, ClusterTableCombined, clusterIDOut, handles.ClusterTable] = DBSCANonDoCResults(handles.CellData, handles.ROICoordinates, ...
+                fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.Chan1Color, handles.Chan2Color, dbscanParams, handles.NDataColumns, ...
+                handles.CombinedColor, isCombined);
             
-            handles = AssignDoCDataToPoints(handles, clusterIDOut);
-
-%                             
-%                 assignin('base', 'ClusterTableCh1', ClusterTableCh1);
-%                 assignin('base', 'ClusterTableCh2', ClusterTableCh2);
-%                 assignin('base', 'ResultTable', ResultTable);
+            UpdateStatusBar(handles, 'Assigning DoC data to points...');
+            handles = AssignDoCDataToPoints(handles, clusterIDOut, isCombined);
+            
+            %
+            %                 assignin('base', 'ClusterTableCh1', ClusterTableCh1);
+            %                 assignin('base', 'ClusterTableCh2', ClusterTableCh2);
+            %                 assignin('base', 'ResultTable', ResultTable);
             
             % ^ Doesn't quite capture all of the stats that
             % EvalStatisticsOnDBSCANandDoCResults.m does in ClusterTable.  Let's see
             % if/when it falls apart
             
-            EvalStatisticsOnDBSCANandDoCResults(ClusterTableCh1, 1, strcat(handles.Outputfolder, '\Clus-DoC Results'));
-            EvalStatisticsOnDBSCANandDoCResults(ClusterTableCh2, 2, strcat(handles.Outputfolder, '\Clus-DoC Results'));
+            UpdateStatusBar(handles, 'Evaluating statistics on DBSCAN and DoC results...');
+            if(~isCombined)
+                EvalStatisticsOnDBSCANandDoCResults(ClusterTableCh1, 1, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
+                EvalStatisticsOnDBSCANandDoCResults(ClusterTableCh2, 2, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
+            else
+                EvalStatisticsOnDBSCANandDoCResults(ClusterTableCombined, 3, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
+            end
             
             guidata(handles.handles.MainFig, handles);
             
@@ -2619,21 +2668,23 @@ function RunDoC(~, ~, ~)
             end
             drawnow;
             
-%             assignin('base', 'ClusterTableCh1', ClusterTableCh1);
-%             assignin('base', 'ClusterTableCh2', ClusterTableCh2);
-%             assignin('base', 'clusterIDOut', clusterIDOut);
+            %             assignin('base', 'ClusterTableCh1', ClusterTableCh1);
+            %             assignin('base', 'ClusterTableCh2', ClusterTableCh2);
+            %             assignin('base', 'clusterIDOut', clusterIDOut);
             
             disp('DoC exited with errors');
+            UpdateStatusBar(handles, 'DoC exited with errors');
             rethrow(mError);
             
         end
     end
-
+    
     set(handles.handles.MainFig, 'pointer', 'arrow');
     set(get(handles.handles.b_panel, 'children'), 'enable', 'on');
-	if handles.Nchannels == 1
+    if handles.Nchannels == 1
         set(handles.handles.hDoC_All1, 'enable', 'off');
     end
+    UpdateStatusBar(handles, 'DoC completed!');
     drawnow;
     
     guidata(handles.handles.MainFig, handles);
@@ -2647,7 +2698,7 @@ function RunPoC(~, ~, ~)
 end
 
 
-function handles = AssignDoCDataToPoints(handles, clusterIDOut)
+function handles = AssignDoCDataToPoints(handles, clusterIDOut, isCombined)
 
 % disp('clusterIDAssign');
 
@@ -2669,18 +2720,20 @@ function handles = AssignDoCDataToPoints(handles, clusterIDOut)
             whichPointsInROI = whichPointsInROI(:, m) == '1';
             
             % Assign cluster IDs to the proper points in CellData
-            handles.CellData{k}(whichPointsInROI & (handles.CellData{k}(:,12) == 1), handles.NDataColumns + 3) = clusterIDOut{m, k, 1};
-            handles.CellData{k}(whichPointsInROI & (handles.CellData{k}(:,12) == 2), handles.NDataColumns + 3) = clusterIDOut{m, k, 2};
+            if(~isCombined)
+                handles.CellData{k}(whichPointsInROI & (handles.CellData{k}(:,12) == 1), handles.NDataColumns + 3) = clusterIDOut{m, k, 1};
+                handles.CellData{k}(whichPointsInROI & (handles.CellData{k}(:,12) == 2), handles.NDataColumns + 3) = clusterIDOut{m, k, 2};
+                handles.CellData{k}(whichPointsInROI, handles.NDataColumns + 9) = 0;
+            else
+                handles.CellData{k}(whichPointsInROI, handles.NDataColumns + 9) = clusterIDOut{m, k, 3};
+            end
 
-            
         end
     end
 
 end
 
 function ExportToTextPush(varargin)
-
-    %TODO: update export columns
 
     handles = guidata(findobj('tag', 'PALM GUI'));
     
@@ -2695,16 +2748,17 @@ function ExportToTextPush(varargin)
             waitbar(fN/(length(handles.CellData) + 1), w);
 
             fileName = strcat(handles.ImportFiles{fN}(1:(end-4)), '_ExportByPoint.txt');
+            UpdateStatusBar(handles, 'Exporting _ExportByPoint.txt file...');
             fprintf(1, 'Writing to file %s\n', fileName);
 
             fID = fopen(fileName, 'w+');
 
             if handles.NDataColumns == 13
-                headerString = sprintf('Index\tFirstFrame\tNumFrames\tNFramesMissing\tPostX[nm]\tPostY[nm]\tPrecision[nm]\tNPhotons\tBkgdVar\tChi^2\tPSFWidth[nm]\tChannel\tZSlice\tROINum\tInOutMask\tClusterID\tDoCScore\tLrValue\tCrossChanDensity\tLrAboveThreshold\tAllChanDensity\r\n');
-                fmtStr = strcat(repmat('%d\t', 1, 4), repmat('%.1f\t', 1, 3), '%d\t%.4f\t%.4f\t%.1f\t%d\t%d\t%s\t%d\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\r\n');
+                headerString = sprintf('Index\tFirstFrame\tNumFrames\tNFramesMissing\tPostX[nm]\tPostY[nm]\tPrecision[nm]\tNPhotons\tBkgdVar\tChi^2\tPSFWidth[nm]\tChannel\tZSlice\tROINum\tInOutMask\tClusterID\tDoCScore\tLrValue\tCrossChanDensity\tLrAboveThreshold\tAllChanDensity\tCombinedClusterID\r\n');
+                fmtStr = strcat(repmat('%d\t', 1, 4), repmat('%.1f\t', 1, 3), '%d\t%.4f\t%.4f\t%.1f\t%d\t%d\t%s\t%d\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%d\r\n');
             elseif handles.NDataColumns == 12
-                headerString = sprintf('Index\tFirstFrame\tNumFrames\tNFramesMissing\tPostX[nm]\tPostY[nm]\tPrecision[nm]\tNPhotons\tBkgdVar\tChi^2\tPSFWidth[nm]\tChannel\tROINum\tInOutMask\tClusterID\tDoCScore\tLrValue\tCrossChanDensity\tLrAboveThreshold\tAllChanDensity\r\n');
-                fmtStr = strcat(repmat('%d\t', 1, 4), repmat('%.1f\t', 1, 3), '%d\t%.4f\t%.4f\t%.1f\t%d\t%s\t%d\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\r\n');
+                headerString = sprintf('Index\tFirstFrame\tNumFrames\tNFramesMissing\tPostX[nm]\tPostY[nm]\tPrecision[nm]\tNPhotons\tBkgdVar\tChi^2\tPSFWidth[nm]\tChannel\tROINum\tInOutMask\tClusterID\tDoCScore\tLrValue\tCrossChanDensity\tLrAboveThreshold\tAllChanDensity\tCombinedClusterID\r\n');
+                fmtStr = strcat(repmat('%d\t', 1, 4), repmat('%.1f\t', 1, 3), '%d\t%.4f\t%.4f\t%.1f\t%d\t%s\t%d\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%d\r\n');
             else
                 error('Number of data columns not supported');
             end
@@ -2713,11 +2767,22 @@ function ExportToTextPush(varargin)
 
             
             ROIIDStr = dec2bin(handles.CellData{fN}(:,14));
-            for k = 1:size(handles.CellData{fN}, 1);
+            exportInRoi = get(handles.handles.ExportResultsCheckbox, 'Value');
+            if(exportInRoi == 0)
+                for k = 1:size(handles.CellData{fN}, 1)
+                    fprintf(fID, fmtStr, handles.CellData{fN}(k,1:handles.NDataColumns), ROIIDStr(k, :), ...
+                        handles.CellData{fN}(k, (handles.NDataColumns + 2):end));
 
-                fprintf(fID, fmtStr, handles.CellData{fN}(k,1:handles.NDataColumns), ROIIDStr(k, :), ...
-                    handles.CellData{fN}(k, (handles.NDataColumns + 2):end));
-
+                end
+            else
+                % Since which ROI a point falls in is encoded in binary, decode here
+                whichPointsInROI = fliplr(dec2bin(handles.CellData{handles.CurrentCellData}(:,handles.NDataColumns + 1)));
+                whichPointsInROI = whichPointsInROI(:,handles.CurrentROIData) == '1';
+                dataCropped = handles.CellData{handles.CurrentCellData}(whichPointsInROI, :);
+                for k = 1:size(dataCropped, 1)
+                    fprintf(fID, fmtStr, dataCropped(k,1:handles.NDataColumns), ROIIDStr(k, :), ...
+                        dataCropped(k, (handles.NDataColumns + 2):end));
+                end 
             end
 
             fprintf(fID, '\r\n');
@@ -2757,12 +2822,13 @@ function ExportToTextPush(varargin)
         % Print to txt file
         
         fileName = strcat(handles.ImportFiles{fN}(1:(end-4)), '_ClusterExport.txt');
+        UpdateStatusBar(handles, 'Exporting _ClusterExport.txt file...');
         fprintf(1, 'Writing to file %s\n', fileName);
         fID = fopen(fileName, 'w+');
-        fprintf(fID, 'CellNum\tROINum\tChannel\tClusterID\tNPoints\tNb\tMeanDoCScore\tArea\tCircularity\tTotalAreaDensity\tAvRelativeDensity\tMeanDensity\tNb_In\tNInMask\tNOutMask\r\n');
+        fprintf(fID, 'CellNum\tROINum\tChannel\tClusterID\tNPoints\tNb\tMeanDoCScore\tArea\tCircularity\tTotalAreaDensity\tAvRelativeDensity\tMeanDensity\tNb_In\tNInMask\tNOutMask\tNChan1Points\tNChan2Points\r\n');
 
-        fmtStr = strcat(repmat('%d\t', 1, 6), repmat('%.4f\t', 1, 6), '%d\t%d\t%d\r\n');
-        for k = 1:size(handles.ClusterTable, 1);
+        fmtStr = strcat(repmat('%d\t', 1, 6), repmat('%.4f\t', 1, 6), '%d\t%d\t%d\t%d\t%d\r\n');
+        for k = 1:size(handles.ClusterTable, 1)
 
             fprintf(fID, fmtStr, handles.ClusterTable(k,:));
 
@@ -2807,6 +2873,8 @@ function ExportToTextPush(varargin)
         set(get(handles.handles.b_panel, 'children'), 'enable', 'on')
         set(handles.handles.MainFig, 'pointer', 'arrow');
         
+        UpdateStatusBar(handles, 'Exporting to txt files completed!');
+        
     catch mError
         set(get(handles.handles.b_panel, 'children'), 'enable', 'on');
         if handles.Nchannels == 1
@@ -2814,11 +2882,12 @@ function ExportToTextPush(varargin)
         end
         set(handles.handles.MainFig, 'pointer', 'arrow');
         rethrow(mError)
+        UpdateStatusBar(handles, 'Exporting to txt failed with errors');
     end
 
 end
 
-function clusterTableOut = AppendToClusterTable(clusterTable, Ch, cellIter, roiIter, ClusterCh, classOut)
+function clusterTableOut = AppendToClusterTable(clusterTable, Ch, cellIter, roiIter, ClusterCh, classOut, channel)
 
     try 
         if isempty(clusterTable)
@@ -2833,6 +2902,13 @@ function clusterTableOut = AppendToClusterTable(clusterTable, Ch, cellIter, roiI
             % Clear out the rows that were for this ROI done previously
             clusterTable(oldROIRows, :) = [];
 
+        end
+        
+        % update number of points in each channel in clusters
+        for i = 1:max(classOut)
+            c = channel(classOut == i);
+            ClusterCh{i, 1}.NChan1Points = sum( c == 1 );
+            ClusterCh{i, 1}.NChan2Points = sum( c == 2 );
         end
 
         % Add new data to the clusterTable
@@ -2868,6 +2944,9 @@ function clusterTableOut = AppendToClusterTable(clusterTable, Ch, cellIter, roiI
         
         appendTable(:, 14) = cellfun(@(x) x.NInsideMask, ClusterCh); % NPointsInsideMask
         appendTable(:, 15) = cellfun(@(x) x.NOutsideMask, ClusterCh); % NPointsInsideMask
+        
+        appendTable(:, 16) = cellfun(@(x) x.NChan1Points, ClusterCh); % NChan1Points
+        appendTable(:, 17) = cellfun(@(x) x.NChan2Points, ClusterCh); % NChan2Points
 
         clusterTableOut = [clusterTable; appendTable];
     

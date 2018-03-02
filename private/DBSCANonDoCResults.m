@@ -1,6 +1,6 @@
-function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, clusterIDOut, clusterTable] = DBSCANonDoCResults(CellData, ROICoordinates, Path_name, Chan1Color, Chan2Color, dbscanParamsPassed, NDatacolumns, clusterTable)
+function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, ClusterSmoothTableCombined, clusterIDOut, clusterTable] = DBSCANonDoCResults(CellData, ROICoordinates, Path_name, ...
+    Chan1Color, Chan2Color, dbscanParamsPassed, NDatacolumns, CombinedColor, IsCombined)
 % Routine to apply DBSCAN on the Degree of Colocalisation Result for
-
 
 % Channel 1
 % Ch1 hhhhhhh
@@ -14,16 +14,22 @@ function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, clusterIDOut, clusterTab
 %         end
 %
 
-ClusterSmoothTableCh1 = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
-ClusterSmoothTableCh2 = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
+    ClusterSmoothTableCh1 = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
+    ClusterSmoothTableCh2 = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
+    ClusterSmoothTableCombined = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
 
-ResultCell = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
+    ResultCell = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
 
-clusterIDOut = cell(max(cellfun(@length, ROICoordinates)), length(CellData), 2);
+    clusterIDOut = cell(max(cellfun(@length, ROICoordinates)), length(CellData), 2);
 
-clusterTable = [];
+    clusterTable = [];
 
-    for Ch = 1:2
+    channels = [1, 2];
+    if(IsCombined)
+        channels = 3;
+    end
+
+    for Ch = channels
 
         cellROIPair = [];
 
@@ -33,16 +39,17 @@ clusterTable = [];
                 % Since which ROI a point falls in is encoded in binary, decode here
                 whichPointsInROI = fliplr(dec2bin(CellData{cellIter}(:,NDatacolumns + 1)));
                 whichPointsInROI = whichPointsInROI(:, roiIter) == '1';
-                
-                Data = CellData{cellIter}(whichPointsInROI, :);
 
+                Data = CellData{cellIter}(whichPointsInROI, :);  
 
                 if ~isempty(Data)
-                    
-                    thisROIandThisChannel = CellData{cellIter}(whichPointsInROI, 12) == Ch;
 
-                    Data_DoC1 = Data(thisROIandThisChannel, :);
-
+                    if(~IsCombined)
+                        thisROIandThisChannel = CellData{cellIter}(whichPointsInROI, 12) == Ch;
+                        Data_DoC1 = Data(thisROIandThisChannel, :);
+                    else
+                        Data_DoC1 = Data;
+                    end
 
                     % FunDBSCAN4ZEN( Data,p,q,2,r,Cutoff,Display1, Display2 )
                     % Input :
@@ -57,13 +64,15 @@ clusterTable = [];
 
                     dbscanParams = dbscanParamsPassed(Ch);
                     dbscanParams.CurrentChannel = Ch;
+                    dbscanParams.IsCombined = IsCombined;
 
                     if Ch == 1
                         clusterColor = Chan1Color;
                     elseif Ch == 2
                         clusterColor = Chan2Color;
+                    else
+                        clusterColor = CombinedColor;
                     end
-
 
                     % DBSCAN_Radius=20 - epsilon
                     % DBSCAN_Nb_Neighbor=3; - minPts ;
@@ -71,7 +80,7 @@ clusterTable = [];
 
                     % [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHandler(Data, ...
                     % DBSCANParams, cellNum, ROINum, display1, display2, clusterColor, InOutMaskVector, Density, DoCScore)
-                    
+
                     [~, ClusterCh, ~, classOut, ~, ~, ~, ResultCell{roiIter, cellIter}] = DBSCANHandler(Data_DoC1(:,5:6), ...
                         dbscanParams, cellIter, roiIter, true, false, clusterColor, Data_DoC1(:, NDatacolumns + 2), Data_DoC1(:, NDatacolumns + 6), ...
                         Data_DoC1(:, NDatacolumns + 4));
@@ -80,14 +89,19 @@ clusterTable = [];
                     cellROIPair = [cellROIPair; cellIter, roiIter, roi(1,1), roi(1,2), polyarea(roi(:,1), roi(:,2))];
 
                     clusterIDOut{roiIter, cellIter, Ch} = classOut;
-                    
+
                     % Assign cluster IDs to the proper points in CellData
                     % Doing this here to send to AppendToClusterTable, when
-                    % also done (permanently) in ClusDoC 
-                    CellData{cellIter}(whichPointsInROI & (CellData{cellIter}(:,12) == Ch), NDatacolumns + 3) = classOut;
-                                       
-%                     InClusters = whichPointsInROI;
-%                     InClusters(thisROIandThisChannel) = classOut > 0;
+                    % also done (permanently) in ClusDoC
+                    if(~IsCombined)
+                        CellData{cellIter}(whichPointsInROI & (CellData{cellIter}(:,12) == Ch), NDatacolumns + 3) = classOut;
+                        CellData{cellIter}(whichPointsInROI, NDatacolumns + 9) = 0;
+                    else
+                        CellData{cellIter}(whichPointsInROI, NDatacolumns + 9) = classOut;
+                    end
+
+                    %                     InClusters = whichPointsInROI;
+                    %                     InClusters(thisROIandThisChannel) = classOut > 0;
 
                     %                     [ClusterCh, fig] = FunDBSCAN4DoC_GUIV2(Data_DoC1, p, q, r, Display1);
 
@@ -101,18 +115,17 @@ clusterTable = [];
                     % Fig1, fig2 fig3 : handle for figures plot in the
                     % function.
 
-                    
-                    clusterTable = AppendToClusterTableInternal(clusterTable, Ch, cellIter, roiIter, ClusterCh, classOut);
-                    
+
+                    clusterTable = AppendToClusterTableInternal(clusterTable, Ch, cellIter, roiIter, ClusterCh, classOut, Data_DoC1(:, 12));
+
                     % Save the plot and data
                     switch Ch
                         case 1
-
                             ClusterSmoothTableCh1{roiIter,cellIter} = ClusterCh;
-
                         case 2
-
                             ClusterSmoothTableCh2{roiIter,cellIter} = ClusterCh;
+                        case 3
+                            ClusterSmoothTableCombined{roiIter,cellIter} = ClusterCh;
                     end
 
                     %                         Name1 = sprintf('_Table_%d_Region_%d_', p, q);
@@ -129,36 +142,46 @@ clusterTable = [];
             end % ROI counter
         end % Cell counter
 
-%         disp(ResultCell);
-        
-%         assignin('base', 'ResultCell', ResultCell);
-%         assignin('base', 'cellROIPair', cellROIPair);
-%         assignin('base', 'p', cellIter);
-%         assignin('base', 'q', roiIter);
-        
-        ExportDBSCANDataToExcelFiles(cellROIPair, ResultCell, strcat(Path_name, '\DBSCAN Results'), Ch);
+        %         disp(ResultCell);
+
+        %         assignin('base', 'ResultCell', ResultCell);
+        %         assignin('base', 'cellROIPair', cellROIPair);
+        %         assignin('base', 'p', cellIter);
+        %         assignin('base', 'q', roiIter);
+
+        ExportDBSCANDataToExcelFiles(cellROIPair, ResultCell, fullfile(Path_name, 'DBSCAN Results'), Ch, IsCombined);
 
     end % channel
 
+    if(~IsCombined)
+        save(fullfile(Path_name, 'DBSCAN Clus-DoC Results.mat'),'ClusterSmoothTableCh1','ClusterSmoothTableCh2');
+    else
+        save(fullfile(Path_name, 'DBSCAN Clus-DoC Results.mat'),'ClusterSmoothTableCombined');
+    end
 
-save(fullfile(Path_name, 'DBSCAN Clus-DoC Results.mat'),'ClusterSmoothTableCh1','ClusterSmoothTableCh2');
 end
 
-function clusterTableOut = AppendToClusterTableInternal(clusterTable, Ch, cellIter, roiIter, ClusterCh, classOut)
+function clusterTableOut = AppendToClusterTableInternal(clusterTable, Ch, cellIter, roiIter, ClusterCh, classOut, channel)
 
-    try 
+    try
         if isempty(clusterTable)
             oldROIRows = [];
         else
             oldROIRows = (ismember(cellIter, clusterTable(:,1)) & ismember(roiIter, clusterTable(:,2)) & ismember(Ch, clusterTable(:,3)));
         end
 
-
         if any(oldROIRows)
 
             % Clear out the rows that were for this ROI done previously
             clusterTable(oldROIRows, :) = [];
 
+        end
+        
+        % update number of points in each channel in clusters
+        for i = 1:max(classOut)
+            c = channel(classOut == i);
+            ClusterCh{i, 1}.NChan1Points = sum( c == 1 );
+            ClusterCh{i, 1}.NChan2Points = sum( c == 2 );
         end
 
         % Add new data to the clusterTable
@@ -183,9 +206,12 @@ function clusterTableOut = AppendToClusterTableInternal(clusterTable, Ch, cellIt
         appendTable(:, 13) = cellfun(@(x) x.Nb_In, ClusterCh); % Nb_In
         appendTable(:, 14) = cellfun(@(x) x.NInsideMask, ClusterCh); % NPointsInsideMask
         appendTable(:, 15) = cellfun(@(x) x.NOutsideMask, ClusterCh); % NPointsInsideMask
+        
+        appendTable(:, 16) = cellfun(@(x) x.NChan1Points, ClusterCh); % NChan1Points
+        appendTable(:, 17) = cellfun(@(x) x.NChan2Points, ClusterCh); % NChan2Points
 
         clusterTableOut = [clusterTable; appendTable];
-    
+
     catch mError
         assignin('base', 'ClusterCh', ClusterCh);
         assignin('base', 'clusterIDList', clusterIDList);
@@ -195,7 +221,7 @@ function clusterTableOut = AppendToClusterTableInternal(clusterTable, Ch, cellIt
         rethrow(mError);
 
     end
-    
+
 end
 
 

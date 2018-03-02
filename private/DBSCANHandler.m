@@ -11,6 +11,7 @@ function [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHan
     
     % !!!Cannot check for big dataset due to memory issue
     if(size(Data, 1) < 10000)
+        UpdateMainStatusBar('Checking if clustering is even possible on this dataset...');
         distRow = pdist(Data(:,1:2));
         nPossibleClustering = sum(distRow < DBSCANParams.epsilon);
         if nPossibleClustering >= DBSCANParams.minPts
@@ -35,7 +36,7 @@ function [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHan
         varargout{1} = [];
         varargout{2} = [];
         varargout{3} = [];
-        varargout{4} = [];    
+        varargout{4} = [];
         return
     end
 
@@ -77,7 +78,7 @@ try
             if nargin == 10
                 Density = varargin{7}; % Data is an input
                 DoCScore = varargin{8};
-                printOutFigDest = 'Clus-DoC Results\DBSCAN Results';
+                printOutFigDest = sprintf('Clus-DoC Results%sDBSCAN Results', filesep);
             end
 
         end
@@ -178,7 +179,13 @@ try
             
         else
             
-            for i = 1:max(class)
+            MaxClass = max(class);
+            for i = 1:MaxClass
+                
+                if(mod(i, 100) == 0)
+                    str = sprintf('Processing cluster %d/%d...', i, MaxClass);
+                    UpdateMainStatusBar(str);
+                end
 
                 xin = datathr(class == i,:); % Positions contained in the cluster i
 
@@ -278,7 +285,6 @@ try
                 SumofContour={SumofBigContour, SumofSmallContour};
 
                 % Plot the contour
-
                 if display1 || ~printOutFig
 
                     if length(Nb) > DBSCANParams.Cutoff % Does this switch do anything?
@@ -287,22 +293,23 @@ try
                     else
                         plot(ax1, contour(:,1), contour(:,2), 'color', rgb(44, 62, 80));
                     end
-
                 end
 
             end
         end
-             ClusterSmooth = ClusterSmooth(~cellfun('isempty', ClusterSmooth));
+        
+        UpdateMainStatusBar('DBSCAN completed');
+        
+        ClusterSmooth = ClusterSmooth(~cellfun('isempty', ClusterSmooth));
 
-             % Plot DBSCAN results
-             Name = strcat('Cell', num2str(cellNum), '_Region', num2str(ROINum), 'Region_with_Cluster.tif');
-             set(ax1, 'box', 'on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
-             set(fig1, 'Color', [1 1 1], 'Tag', 'ClusDoC')
-             if printOutFig
-                print(fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cluster maps', Name), fig1, '-dtiff');
-                close(fig1);
-             end
-
+        % Plot DBSCAN results
+        Name = strcat('Cell', num2str(cellNum), '_Region', num2str(ROINum), 'Region_with_Cluster.tif');
+        set(ax1, 'box', 'on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
+        set(fig1, 'Color', [1 1 1], 'Tag', 'ClusDoC')
+        if printOutFig
+        print(fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cluster maps', Name), fig1, '-dtiff');
+        close(fig1);
+        end
 
         %      s=cellfun('size', Cluster,1); % sort cluster by size
         %      [dummy index]=sort(s);
@@ -400,13 +407,13 @@ try
         end
         
         
-        
 catch mError
     assignin('base', 'DBSCANData', Data);
     assignin('base', 'DBSCANParams', DBSCANParams);
     assignin('base', 'DBSCANInputArgs', varargin);
 
     disp('DBSCANHandler failed with errors');
+    UpdateMainStatusBar('DBSCANHandler failed with errors');
     rethrow(mError);
 end
 

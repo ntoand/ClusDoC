@@ -4,6 +4,7 @@ function ResultTable = ProcessDoCResults(CellData, NDatacolumns, ROICoordinates,
 %         if exist('Statistic and Plots for Colocalization','dir')
 %             rmdir('Statistic and Plots for Colocalization','s')
 %         end
+
 f1 = 'DoC statistics and plots';
 
 mkdir(fullfile(Path_name, f1));
@@ -421,11 +422,14 @@ ResultTable = A;
 %                     AvNorm_DensityBelow04...
 %                     AvRela_DensityAbove04... 
 %                     AvRela_DensityBelow04...
-%                     Correlation_ColocVsDensity];% PercentLrAbove05_Ch1 PercentLrAbove05_Ch2];
+%                     Correlation_ColocVsDensity];% PercentLrAbove05_Ch1
+%                     PercentLrAbove05_Ch2];
      
     RegionName1 = strcat('DoC Results'); % name of the sheet
-    xlswrite(fullfile(Path_name, 'DoC Results'), Array1, RegionName1, 'A1'); %'Regiion' = name of the filename xcel shee, Array1 = data to put in the spreadsheet, 'A1' where to start
-    xlswrite(fullfile(Path_name, 'DoC Results'), Matrix_Result1, RegionName1, 'A2');
+    if ispc
+        xlswrite(fullfile(Path_name, 'DoC Results'), Array1, RegionName1, 'A1'); %'Regiion' = name of the filename xcel shee, Array1 = data to put in the spreadsheet, 'A1' where to start
+        xlswrite(fullfile(Path_name, 'DoC Results'), Matrix_Result1, RegionName1, 'A2');
+    end
     
     %% Density ch1 ch2
     

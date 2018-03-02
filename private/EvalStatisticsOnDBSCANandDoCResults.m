@@ -124,6 +124,9 @@ switch Ch
     case 2
         ResultCh2=Result2;    
         save(fullfile(outputFolder, 'ResultCh2.mat'),'ResultCh2')
+    case 3
+        ResultCombined = Result2;
+        save(fullfile(outputFolder, 'ResultCombined.mat'),'ResultCombined')
 end
     
 
@@ -170,17 +173,22 @@ end
     
     RegionName = strcat('Clus-DoC results');
     
- switch Ch
-    case 1
-        xlswrite(fullfile(outputFolder, 'Clus-DoC Ch1.xls'), Array, RegionName, 'A1');
-        xlswrite(fullfile(outputFolder, 'Clus-DoC Ch1.xls'), Matrix_Result, RegionName, 'A2');
-    case 2
-        xlswrite(fullfile(outputFolder, 'Clus-DoC Ch2.xls'), Array, RegionName, 'A1');
-        xlswrite(fullfile(outputFolder, 'Clus-DoC Ch2.xls'), Matrix_Result, RegionName, 'A2');
- end
+    if ispc
+        switch Ch
+            case 1
+                xlswrite(fullfile(outputFolder, 'Clus-DoC Ch1.xls'), Array, RegionName, 'A1');
+                xlswrite(fullfile(outputFolder, 'Clus-DoC Ch1.xls'), Matrix_Result, RegionName, 'A2');
+            case 2
+                xlswrite(fullfile(outputFolder, 'Clus-DoC Ch2.xls'), Array, RegionName, 'A1');
+                xlswrite(fullfile(outputFolder, 'Clus-DoC Ch2.xls'), Matrix_Result, RegionName, 'A2');
+            case 3
+                xlswrite(fullfile(outputFolder, 'Clus-DoC Combined.xls'), Array, RegionName, 'A1');
+                xlswrite(fullfile(outputFolder, 'Clus-DoC Combined.xls'), Matrix_Result, RegionName, 'A2');
+        end
+    else
+      disp('WARNING: ignore XLS write in EvalStatisticsOnDBSCANandDoCResults');
+    end
 
-
-    
 end
     
     
