@@ -4,6 +4,7 @@ function [dataOut, SizeROI] = DoCCalc(Data, Lr_rad, Rmax, Step, roiHere)
     %%%%%%% Threshold measure at the randomness
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     fprintf(1, 'Segment clustered points from background... \n');
+    UpdateMainStatusBar('Segment clustered points from background...');
 
     SizeROI = polyarea(roiHere(:,1), roiHere(:,2));
 
@@ -67,6 +68,7 @@ function [dataOut, SizeROI] = DoCCalc(Data, Lr_rad, Rmax, Step, roiHere)
     tic
     
     fprintf(1, 'Calculating DoC scores...\n');
+    UpdateMainStatusBar('Calculating DoC scores...');
     % DoC calculation for Chan1 -> Chan1, Chan1 -> Chan2
 
     parfor i = 1:ceil(Rmax/Step)
@@ -96,6 +98,7 @@ function [dataOut, SizeROI] = DoCCalc(Data, Lr_rad, Rmax, Step, roiHere)
     end
 
     fprintf(1, 'Correlating coefficients...\n');
+    UpdateMainStatusBar('Correlating coefficients...');
 
     SA1 = zeros(size(x1, 1), 1);
     SA2 = zeros(size(x2, 1), 1);

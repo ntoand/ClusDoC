@@ -33,8 +33,14 @@ function DoCGUIInitialize(varargin)
         handles = guidata(figObj);
         fig1 = figObj;
     else
+        %fig1 = figure('Name','Clus-DoC', 'Tag', 'PALM GUI', 'Units', 'pixels',...
+        %    'Position',[700 150 924 780], 'color', [1 1 1]);%'Position',[0.05 0.3 760/scrsz(3) 650/scrsz(4)] );
+        ss = get(0,'screensize');
+        left = (ss(3) - 924) / 2;
+        bottom = (ss(4) - 810) / 2;
         fig1 = figure('Name','Clus-DoC', 'Tag', 'PALM GUI', 'Units', 'pixels',...
-            'Position',[700 150 924 780], 'color', [1 1 1]);%'Position',[0.05 0.3 760/scrsz(3) 650/scrsz(4)] );
+            'Position',[left bottom 924 780], 'color', [1 1 1]);%'Position',[0.05 0.3 760/scrsz(3) 650/scrsz(4)] );
+        
         set(fig1, 'CloseRequestFcn', @CloseGUIFunction);
 
         handles.handles.MainFig = fig1;
@@ -1370,9 +1376,9 @@ function returnValue = setRipleyKParameters(handles)
     set(handles.handles.RipleyKSettingsFig, 'toolbar', 'none', 'menubar', 'none', ...
         'name', 'Ripley K Parameters');
   
-	handles.handles.RipleyKSettingsTitleText(2) = uicontrol('Style', 'text', ...
-        'String', '_____________________', 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [0 153 220 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+% 	handles.handles.RipleyKSettingsTitleText(2) = uicontrol('Style', 'text', ...
+%         'String', '_____________________', 'parent', handles.handles.RipleyKSettingsFig,...
+%         'Position', [0 153 220 20], 'horizontalalignment', 'center', 'Fontsize', 10);
 
 	handles.handles.RipleyKSettingsTitleText(1) = uicontrol('Style', 'text', ...
         'String', 'Ripley K Parameters', 'parent', handles.handles.RipleyKSettingsFig,...
@@ -1473,9 +1479,9 @@ function returnValue = setDBSCANParameters(handles, withstats)
     set(handles.handles.DBSCANSettingsFig, 'toolbar', 'none', 'menubar', 'none', ...
         'name', 'DBSCAN Parameters');
         
-	handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
-        'String', '_____________________', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 215 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+% 	handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
+%         'String', '_____________________', 'parent', handles.handles.DBSCANSettingsFig,...
+%         'Position', [0 215 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
 
     str = 'DBSCAN Parameters for channels';
     if(isCombined)
@@ -1486,7 +1492,7 @@ function returnValue = setDBSCANParameters(handles, withstats)
         'Position', [0 220 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
     
     %%%%%%
-    if verLessThan('matlab', '8.4');
+    if verLessThan('matlab', '8.4')
         handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.2 195/250 .6 .11],...
             'SelectionChangeFcn', @changeDBSCANChannel);
     else
@@ -1900,6 +1906,8 @@ function returnValue = setDoCParameters(handles)
 	handles.handles.DBSCANDoStatsToggle = uicontrol('Style', 'checkbox', ...
         'Value', handles.DBSCAN(ch).DoStats, 'position', [375 10+SUP2 20 20]);
 
+    set(handles.handles.DBSCANSetToggle, 'Enable', 'off');
+    set(handles.handles.DBSCANDoStatsToggle, 'Enable', 'off');
 
     %%%%%%
     

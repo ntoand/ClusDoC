@@ -214,12 +214,11 @@ function clusterTableOut = AppendToClusterTableInternal(clusterTable, Ch, cellIt
 
     catch mError
         assignin('base', 'ClusterCh', ClusterCh);
-        assignin('base', 'clusterIDList', clusterIDList);
-        assignin('base', 'appendTable', appendTable);
+        %assignin('base', 'clusterIDList', clusterIDList);
+        %assignin('base', 'appendTable', appendTable);
         assignin('base', 'classOut', classOut);
 
         rethrow(mError);
-
     end
 
 end
