@@ -2,6 +2,8 @@
 #include "mex.h"
 #include "kdtree2.hpp"
 
+#include <time.h>
+
 #ifndef M_PI
 #define M_PI 3.14159265359
 #endif
