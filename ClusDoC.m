@@ -2,7 +2,7 @@ function ClusDoC(varargin)
     version = '1.0.0';
     fprintf('Clus-DoC version %s\n', version);
     close all; % for easier debugging
-    DEBUG = false;
+    DEBUG = true;
     if(DEBUG)
         addpath('dev'); % "ln -s private dev" to debug line by line in private funcs
     end
@@ -297,7 +297,7 @@ function DoCGUIInitialize(varargin)
     xbutton=space2;
     ybutton=ybutton-h1-space1;
     handles.handles.ExportResultsCheckbox = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'checkbox', 'String', 'Export only points in active ROI',...
-        'Value', 0, 'Position', [xbutton ybutton w1 h1], 'Callback', @ExportToTextCheckBox, 'Tag', 'ExportToTextCheckBox', ...
+        'Value', 1, 'Position', [xbutton ybutton w1 h1], 'Callback', @ExportToTextCheckBox, 'Tag', 'ExportToTextCheckBox', ...
         'backgroundcolor', [1 1 1], 'fontsize', 10);
     
     % Button ExporttoText
@@ -351,6 +351,8 @@ function initializeParameters(varargin)
     handles.CONST.DEFAULT_ROI_SIZE = 4000;
     handles.CONST.PROCESS_SEPARATE = 1;
     handles.CONST.PROCESS_COMBINED = 2;
+    handles.CONST.POC_TYPE1 = 1;    % poc = sumA / sumB
+    handles.CONST.POC_TYPE2 = 2;    % poc = sumA / (sumA + sumB)
     
     % Initialize structure to pass values between GUI components
     handles.CellData = {};
@@ -398,6 +400,14 @@ function initializeParameters(varargin)
     handles.DoC.ColoThres = 0.4;
     handles.DoC.NbThresh = 10;
     
+    % Default PoC parameters
+    handles.PoC.FuncType = handles.CONST.POC_TYPE1;
+    handles.PoC.Lr_rRad = 20;
+    handles.PoC.Sigma = 100;
+    handles.PoC.ColoThres = 0.4;
+    handles.PoC.NbThresh = 10;
+    
+    % output
     handles.ClusterTable = [];
     
     % Send back to main figure
@@ -2020,6 +2030,321 @@ function returnValue = setDoCParameters(handles)
 end
 
 
+% Pop-up window to set PoC parameters
+function returnValue = setPoCParameters(handles)
+
+    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
+
+    handles.handles.PoCSettingsFig = figure();
+    set(handles.handles.PoCSettingsFig, 'Tag', 'ClusPoC');
+    resizeFig(handles.handles.PoCSettingsFig, [510 306]);
+    set(handles.handles.PoCSettingsFig, 'toolbar', 'figure', 'menubar', 'none', ...
+        'name', 'PoC Parameters');
+    
+    ch = 1;
+    if(isCombined)
+        ch = 3;
+    end
+    
+    SUP = 40; %shift control up compared to v1.0.0
+    SUP2 = 30;
+   
+    handles.handles.PoCSettingsTitleText(2) = uicontrol('Style', 'text', ...
+        'String', '_____________________', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [0 197+SUP 200 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+
+	handles.handles.PoCSettingsTitleText(1) = uicontrol('Style', 'text', ...
+        'String', 'Probability of Colocalization Parameters', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [0 207+SUP 200 35], 'horizontalalignment', 'center', 'Fontsize', 10);
+    
+    %%%%%%
+    
+    handles.handles.PoCSettingsText(1) = uicontrol('Style', 'text', ...
+        'String', 'PoC_a=:', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [0 160+SUP2 100 20], 'horizontalalignment', 'right');
+    
+    handles.handles.DoCSettingsText(2) = uicontrol('Style', 'text', ...
+        'String', 'L(r) - r radius (nm):', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [0 130+SUP2 100 20], 'horizontalalignment', 'right');
+    
+    handles.handles.PoCSettingsText(3) = uicontrol('Style', 'text', ...
+        'String', 'Gaussian width (sigma):', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [0 100+SUP2 100 30], 'horizontalalignment', 'right');
+    
+    handles.handles.PoCSettingsText(4) = uicontrol('Style', 'text', ...
+        'String', 'Colocalization Threshold:', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [0 60+SUP2 100 30], 'horizontalalignment', 'right');
+    
+    handles.handles.PoCSettingsText(5) = uicontrol('Style', 'text', ...
+        'String', 'Min Coloc''d Points/Cluster:', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [0 20+SUP2 100 30], 'horizontalalignment', 'right');
+    
+	%%%%%%%%%%
+    
+    handles.handles.PoCSettingsEdit(1) = uicontrol(handles.handles.b_panel, 'Style', 'popup', 'String', ...
+        {'sum_b/sum_a', 'sum_b/(sum_a+sum_b)'}, 'parent', handles.handles.PoCSettingsFig, ...
+        'Position', [118 162+SUP2 120 20]);
+    
+    handles.handles.PoCSettingsEdit(2) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.PoC.Lr_rRad), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [120 132+SUP2 60 20]);
+    
+    handles.handles.PoCSettingsEdit(3) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.PoC.Sigma), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [120 102+SUP2 60 20]);
+    
+    handles.handles.PoCSettingsEdit(4) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.PoC.ColoThres), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [120 67+SUP2 60 20]);
+    
+    handles.handles.PoCSettingsEdit(5) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.PoC.NbThresh), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [120 32+SUP2 60 20]);
+    
+    
+    %%%%%%%%%%%%%%%
+    % PoC - DBSCAN settings
+    
+    str = 'DBSCAN Parameters';
+    if(isCombined)
+        str = 'DBSCAN Parameters for combined data';
+    end
+	handles.handles.DBSCANSettingsTitleText(1) = uicontrol('Style', 'text', ...
+        'String', str, 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [260 220+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+    
+    %%%%%%%%
+    if verLessThan('matlab', '8.4')
+        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.55 220/306 .4 .11],...
+            'SelectionChangeFcn', @changeDBSCANChannel);
+    else
+        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.55 220/306 .4 .11],...
+            'SelectionChangedFcn', @changeDBSCANChannel);
+    end
+                  
+    handles.handles.DBSCANChannelSelect(1) = uicontrol(handles.handles.DBSCANChannelToggle, ...
+        'Style', 'radiobutton', 'String', 'Ch 1', 'position', [39 7 50 20]);
+    
+    handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
+        'Style', 'radiobutton', 'String', 'Ch 2', 'position', [130 7 50 20]);
+    
+    if verLessThan('matlab', '8.4')
+        
+        if handles.Nchannels > 1
+            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
+        else
+            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
+            set(handles.handles.DBSCANChannelSelect(2), 'Enable', 'off');
+        end
+        
+    else
+        if handles.Nchannels > 1
+            handles.handles.DBSCANChannelToggle.Visible = 'on';
+        else
+            handles.handles.DBSCANChannelToggle.Visible = 'on';
+            handles.handles.DBSCANChannelSelect(2).Enable = 'off';
+        end
+    end
+    
+    if(isCombined)
+        if verLessThan('matlab', '8.4')
+            set(handles.handles.DBSCANChannelToggle, 'Visible', 'off'); 
+        else
+            handles.handles.DBSCANChannelToggle.Visible = 'off';
+        end 
+        handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
+            'String', '_____________________', 'parent', handles.handles.PoCSettingsFig,...
+            'Position', [260 197+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+    end
+        
+    %%%%%%%%
+    
+    
+    %%%%%%
+    
+    handles.handles.DBSCANSettingsText(1) = uicontrol('Style', 'text', ...
+        'String', 'Epsilon (nm):', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [260 157+SUP2 110 20], 'horizontalalignment', 'right');
+    
+    handles.handles.DBSCANSettingsText(2) = uicontrol('Style', 'text', ...
+        'String', 'minPts:', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [260 132+SUP2 110 20], 'horizontalalignment', 'right');
+    
+    handles.handles.DBSCANSettingsText(3) = uicontrol('Style', 'text', ...
+        'String', 'Plot Cutoff:', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [260 107+SUP2 110 20], 'horizontalalignment', 'right');
+    
+    handles.handles.DBSCANSettingsText(4) = uicontrol('Style', 'text', ...
+        'String', 'Processing Threads:', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [260 82+SUP2 110 20], 'horizontalalignment', 'right');
+    
+    handles.handles.DBSCANSettingsText(5) = uicontrol('Style', 'text', ...
+        'String', 'L(r) - r Radius (nm):', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [260 57+SUP2 110 20], 'horizontalalignment', 'right');
+    
+    handles.handles.DBSCANSettingsText(6) = uicontrol('Style', 'text', ...
+        'String', 'Use', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [450 57+SUP2 30 20], 'horizontalalignment', 'right');
+    
+    handles.handles.DBSCANSettingsText(7) = uicontrol('Style', 'text', ...
+        'String', 'Smooth Radius (nm):', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [260 32+SUP2 110 20], 'horizontalalignment', 'right');
+    
+	handles.handles.DBSCANSettingsText(8) = uicontrol('Style', 'text', ...
+        'String', 'Calc Stats:', 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [260 6+SUP2 110 20], 'horizontalalignment', 'right');
+    
+	%%%%%%%%%%
+    
+    handles.handles.DBSCANSettingsEdit(1) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.DBSCAN(ch).epsilon), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [375 161+SUP2 60 20]);
+    
+    handles.handles.DBSCANSettingsEdit(2) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.DBSCAN(ch).minPts), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [375 136+SUP2 60 20]);
+    
+    handles.handles.DBSCANSettingsEdit(3) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.DBSCAN(ch).Cutoff), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [375 111+SUP2 60 20]);
+    
+    handles.handles.DBSCANSettingsEdit(4) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.DBSCAN(ch).threads), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [375 86+SUP2 60 20]);
+    
+    handles.handles.DBSCANSettingsEdit(5) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [375 61+SUP2 60 20]);
+    
+    handles.handles.DBSCANSettingsEdit(6) = uicontrol('Style', 'edit', ...
+        'String', num2str(handles.DBSCAN(ch).SmoothingRad), 'parent', handles.handles.PoCSettingsFig,...
+        'Position', [375 36+SUP2 60 20]);
+    
+    set(handles.handles.DBSCANSettingsEdit, 'Callback', @PoCCheckEditBox);
+    
+    %%%%%%
+    
+    handles.handles.DBSCANSetToggle = uicontrol('Style', 'checkbox', ...
+        'Value', handles.DBSCAN(ch).UseLr_rThresh, 'position', [485 60+SUP2 20 20], ...
+        'callback', @DBSCANUseThreshold);
+    
+	handles.handles.DBSCANDoStatsToggle = uicontrol('Style', 'checkbox', ...
+        'Value', handles.DBSCAN(ch).DoStats, 'position', [375 10+SUP2 20 20]);
+
+    set(handles.handles.DBSCANSetToggle, 'Enable', 'off');
+    set(handles.handles.DBSCANDoStatsToggle, 'Enable', 'off');
+
+    %%%%%%
+    
+    
+    handles.handles.PoCSettingsButton = uicontrol('Style', 'pushbutton', ...
+        'String', 'Continue', 'parent', handles.handles.PoCSettingsFig, ...
+        'Position', [425 4 85 30], 'Callback', @PoCSetAndContinue);
+
+    set(handles.handles.PoCSettingsFig, 'CloseRequestFcn', @PoCCloseOutWindow);
+    
+    PoCUseThreshold();
+    
+    uiwait;
+    
+    function PoCCloseOutWindow(varargin)
+        % Cancel, don't execute further
+        returnValue = 0;
+        uiresume;
+        delete(handles.handles.PoCSettingsFig);
+    end
+
+    function PoCCheckEditBox(hObj, varargin)
+        
+        input = str2double(get(hObj,'string'));
+        if isnan(input) 
+            
+            errordlg('You must enter a numeric value','Invalid Input','modal');
+%             return;
+        elseif input < 0
+            
+            errordlg('Value must be positive','Invalid Input','modal');
+%             return;
+        else
+            % continue
+        end
+
+    end
+
+    function changeDBSCANChannel(varargin)
+        
+        changeToValue = (varargin{2}.NewValue);
+        
+        if strcmp(changeToValue.String, 'Ch 1');
+            ch = 1;
+            oldCh = 2;
+        elseif strcmp(changeToValue.String, 'Ch 2');
+            ch = 2;
+            oldCh = 1;
+        end
+        
+     	handles.DBSCAN(oldCh).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
+        handles.DBSCAN(oldCh).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
+        handles.DBSCAN(oldCh).cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+        handles.DBSCAN(oldCh).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
+        handles.DBSCAN(oldCh).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
+        handles.DBSCAN(oldCh).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
+        handles.DBSCAN(oldCh).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
+        handles.DBSCAN(oldCh).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
+        
+%         disp(handles.DBSCAN(oldCh));
+        
+        set(handles.handles.DBSCANSettingsEdit(1), 'String', num2str(handles.DBSCAN(ch).epsilon));
+        set(handles.handles.DBSCANSettingsEdit(2), 'String', num2str(handles.DBSCAN(ch).minPts));
+        set(handles.handles.DBSCANSettingsEdit(3), 'String', num2str(handles.DBSCAN(ch).Cutoff));
+        set(handles.handles.DBSCANSettingsEdit(4), 'String', num2str(handles.DBSCAN(ch).threads));
+        set(handles.handles.DBSCANSettingsEdit(5), 'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad));
+        set(handles.handles.DBSCANSettingsEdit(6), 'String', num2str(handles.DBSCAN(ch).SmoothingRad));       
+        set(handles.handles.DBSCANSetToggle, 'Value', handles.DBSCAN(ch).UseLr_rThresh);
+        set(handles.handles.DBSCANDoStatsToggle, 'Value', handles.DBSCAN(ch).DoStats);
+        
+    end
+
+
+    function PoCUseThreshold(varargin)
+        
+        if get(handles.handles.DBSCANSetToggle, 'value') == 1
+            set(handles.handles.DBSCANSettingsEdit(5), 'enable', 'on');
+        elseif get(handles.handles.DBSCANSetToggle, 'value') == 0
+            set(handles.handles.DBSCANSettingsEdit(5), 'enable', 'off');
+        end
+        
+    end
+
+    function PoCSetAndContinue(varargin)
+        
+        % Collect inputs and set parameters in guidata
+     	handles.PoC.FuncType = get(handles.handles.PoCSettingsEdit(1),'value');
+        handles.PoC.Lr_rRad = str2double(get(handles.handles.PoCSettingsEdit(2),'string'));
+        handles.PoC.Sigma = str2double(get(handles.handles.PoCSettingsEdit(3),'string'));
+        handles.PoC.ColoThres = str2double(get(handles.handles.PoCSettingsEdit(4), 'string'));
+        handles.PoC.NbThresh = str2double(get(handles.handles.PoCSettingsEdit(5), 'string'));
+             
+        % Collect inputs and set parameters in guidata
+     	handles.DBSCAN(ch).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
+        handles.DBSCAN(ch).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
+        handles.DBSCAN(ch).cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+        handles.DBSCAN(ch).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
+        handles.DBSCAN(ch).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
+        handles.DBSCAN(ch).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
+        handles.DBSCAN(ch).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
+        handles.DBSCAN(ch).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
+        
+        returnValue = 1;
+        guidata(handles.handles.MainFig, handles);
+        uiresume;
+        delete(handles.handles.PoCSettingsFig);
+        
+    end  
+
+end
+
+
 % Function Ripley K Test for active ROI
 function RipleyKtest(~, ~, ~)
 
@@ -2604,7 +2929,7 @@ function RunDoC(~, ~, ~)
             dbscanParams = handles.DBSCAN;
             for i = 1:3
                 dbscanParams(i).Outputfolder = handles.Outputfolder;
-                dbscanParams(i).DoCThreshold = handles.DoC.ColoThres;
+                dbscanParams(i).ScoreThreshold = handles.DoC.ColoThres;
             end
             
             % cd to DoC_Result
@@ -2702,9 +3027,130 @@ end
 
 % Calculate PoC  for selected data or loaded data
 function RunPoC(~, ~, ~)
-    %TODO
     handles = guidata(findobj('Tag', 'PALM GUI'));
-    UpdateStatusBar(handles, 'Not implemented yet!');
+    set(handles.handles.MainFig, 'pointer', 'watch');
+    set(get(handles.handles.b_panel, 'children'), 'enable', 'off');
+    UpdateStatusBar(handles, 'Running PoC on ROI...');
+    drawnow;
+    
+    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
+    
+    
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'PoC histograms'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results'));
+    if(~isCombined)
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Ch1'));
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Ch1', 'Cluster maps'));
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Ch2'));
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Ch2', 'Cluster maps'));
+    else
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Combined'));
+        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Combined', 'Cluster maps'));
+    end
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'PoC Statistics and Plots'));
+    
+    % Input parameters for calculating DoC scores for all points
+	returnVal = setPoCParameters(handles);
+        
+    if returnVal == 0
+        
+        set(handles.handles.MainFig, 'pointer', 'arrow');
+        set(get(handles.handles.b_panel, 'children'), 'enable', 'on');
+        if handles.Nchannels == 1
+            set(handles.handles.hDoC_All1, 'enable', 'off');
+        end
+        drawnow;
+        return;
+        
+    elseif returnVal == 1
+        
+        try
+            
+            handles = guidata(handles.handles.MainFig);
+            % Should be only place that DBSCANparams are passed both
+            % channels together
+            dbscanParams = handles.DBSCAN;
+            for i = 1:3
+                dbscanParams(i).Outputfolder = handles.Outputfolder;
+                dbscanParams(i).ScoreThreshold = handles.PoC.ColoThres;
+            end
+            
+            % cd to DoC_Result
+            
+            % Input parameters:
+            % Sigma - std of Gausssian
+            % ColoThres - threshold for DoC/notDoC - 0.4 default
+            % Nb - Num particles with DoC score above threshold to be a 'colocalised' cluster
+            % DBSCAN_Radius=20 - epsilon
+            % DBSCAN_Nb_Neighbor=3; - minPts ;
+            % threads = 2
+            
+            UpdateStatusBar(handles, 'Calculating PoC...');
+            [handles.CellData, DensityROI] = PoCHandler(handles.ROICoordinates, handles.CellData, ...
+                handles.PoC.FuncType, handles.PoC.Lr_rRad, handles.PoC.Sigma, handles.Chan1Color, handles.Chan2Color, handles.Outputfolder, handles.NDataColumns);
+            
+            %%%%%%%%%%%%%%%
+            % Plotting, segmentation, and statistics start here
+            UpdateStatusBar(handles, 'Processing PoC results...');
+            ResultTable = ProcessPoCResults(handles.CellData, handles.NDataColumns, handles.ROICoordinates, ...
+                DensityROI, fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.PoC.ColoThres);
+            
+            % Run DBSCAN on data used for DoC analysis
+            UpdateStatusBar(handles, 'DBSCAN on PoC results...');
+            [ClusterTableCh1, ClusterTableCh2, ClusterTableCombined, clusterIDOut, handles.ClusterTable] = DBSCANonPoCResults(handles.CellData, handles.ROICoordinates, ...
+                fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.Chan1Color, handles.Chan2Color, dbscanParams, handles.NDataColumns, ...
+                handles.CombinedColor, isCombined);
+            
+            UpdateStatusBar(handles, 'Assigning PoC data to points...');
+            handles = AssignPoCDataToPoints(handles, clusterIDOut, isCombined);
+            
+            UpdateStatusBar(handles, 'Evaluating statistics on DBSCAN and PoC results...');
+            if(~isCombined)
+                EvalStatisticsOnDBSCANandPoCResults(ClusterTableCh1, 1, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
+                EvalStatisticsOnDBSCANandPoCResults(ClusterTableCh2, 2, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
+            else
+                EvalStatisticsOnDBSCANandDoCResults(ClusterTableCombined, 3, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
+            end
+            
+            guidata(handles.handles.MainFig, handles);
+            
+            handles = AppendToROITable(handles, ResultTable);
+            set(handles.handles.ExportResultsButton, 'enable', 'on');
+            
+            %}
+            %
+            %%%%%%%%%%%%%%
+            
+        catch mError
+            
+            set(handles.handles.MainFig, 'pointer', 'arrow');
+            set(get(handles.handles.b_panel, 'children'), 'enable', 'on');
+            if handles.Nchannels == 1
+                set(handles.handles.hDoC_All1, 'enable', 'off');
+            end
+            drawnow;
+            
+            %             assignin('base', 'ClusterTableCh1', ClusterTableCh1);
+            %             assignin('base', 'ClusterTableCh2', ClusterTableCh2);
+            %             assignin('base', 'clusterIDOut', clusterIDOut);
+            
+            disp('PoC exited with errors');
+            UpdateStatusBar(handles, 'PoC exited with errors');
+            rethrow(mError);
+            
+        end
+    end
+    
+    set(handles.handles.MainFig, 'pointer', 'arrow');
+    set(get(handles.handles.b_panel, 'children'), 'enable', 'on');
+    if handles.Nchannels == 1
+        set(handles.handles.hDoC_All1, 'enable', 'off');
+    end
+    UpdateStatusBar(handles, 'PoC completed!');
+    drawnow;
+    
+    guidata(handles.handles.MainFig, handles);
 end
 
 
@@ -2743,6 +3189,13 @@ function handles = AssignDoCDataToPoints(handles, clusterIDOut, isCombined)
 
 end
 
+function handles = AssignPoCDataToPoints(handles, clusterIDOut, isCombined)
+
+    handles = AssignDoCDataToPoints(handles, clusterIDOut, isCombined);
+
+end
+
+
 function ExportToTextPush(varargin)
 
     handles = guidata(findobj('tag', 'PALM GUI'));
@@ -2764,11 +3217,11 @@ function ExportToTextPush(varargin)
             fID = fopen(fileName, 'w+');
 
             if handles.NDataColumns == 13
-                headerString = sprintf('Index\tFirstFrame\tNumFrames\tNFramesMissing\tPostX[nm]\tPostY[nm]\tPrecision[nm]\tNPhotons\tBkgdVar\tChi^2\tPSFWidth[nm]\tChannel\tZSlice\tROINum\tInOutMask\tClusterID\tDoCScore\tLrValue\tCrossChanDensity\tLrAboveThreshold\tAllChanDensity\tCombinedClusterID\r\n');
-                fmtStr = strcat(repmat('%d\t', 1, 4), repmat('%.1f\t', 1, 3), '%d\t%.4f\t%.4f\t%.1f\t%d\t%d\t%s\t%d\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%d\r\n');
+                headerString = sprintf('Index\tFirstFrame\tNumFrames\tNFramesMissing\tPostX[nm]\tPostY[nm]\tPrecision[nm]\tNPhotons\tBkgdVar\tChi^2\tPSFWidth[nm]\tChannel\tZSlice\tROINum\tInOutMask\tClusterID\tDoCScore\tLrValue\tCrossChanDensity\tLrAboveThreshold\tAllChanDensity\tCombinedClusterID\tPoCScore\r\n');
+                fmtStr = strcat(repmat('%d\t', 1, 4), repmat('%.1f\t', 1, 3), '%d\t%.4f\t%.4f\t%.1f\t%d\t%d\t%s\t%d\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%d\t%.4f\r\n');
             elseif handles.NDataColumns == 12
-                headerString = sprintf('Index\tFirstFrame\tNumFrames\tNFramesMissing\tPostX[nm]\tPostY[nm]\tPrecision[nm]\tNPhotons\tBkgdVar\tChi^2\tPSFWidth[nm]\tChannel\tROINum\tInOutMask\tClusterID\tDoCScore\tLrValue\tCrossChanDensity\tLrAboveThreshold\tAllChanDensity\tCombinedClusterID\r\n');
-                fmtStr = strcat(repmat('%d\t', 1, 4), repmat('%.1f\t', 1, 3), '%d\t%.4f\t%.4f\t%.1f\t%d\t%s\t%d\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%d\r\n');
+                headerString = sprintf('Index\tFirstFrame\tNumFrames\tNFramesMissing\tPostX[nm]\tPostY[nm]\tPrecision[nm]\tNPhotons\tBkgdVar\tChi^2\tPSFWidth[nm]\tChannel\tROINum\tInOutMask\tClusterID\tDoCScore\tLrValue\tCrossChanDensity\tLrAboveThreshold\tAllChanDensity\tCombinedClusterID\tPoCScore\r\n');
+                fmtStr = strcat(repmat('%d\t', 1, 4), repmat('%.1f\t', 1, 3), '%d\t%.4f\t%.4f\t%.1f\t%d\t%s\t%d\t%d\t%.4f\t%.4f\t%.4f\t%d\t%.4f\t%d\t%.4f\r\n');
             else
                 error('Number of data columns not supported');
             end
@@ -2824,7 +3277,6 @@ function ExportToTextPush(varargin)
             fprintf(fID, '\r\n');
 
             fclose(fID);
-
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2835,7 +3287,7 @@ function ExportToTextPush(varargin)
         UpdateStatusBar(handles, 'Exporting _ClusterExport.txt file...');
         fprintf(1, 'Writing to file %s\n', fileName);
         fID = fopen(fileName, 'w+');
-        fprintf(fID, 'CellNum\tROINum\tChannel\tClusterID\tNPoints\tNb\tMeanDoCScore\tArea\tCircularity\tTotalAreaDensity\tAvRelativeDensity\tMeanDensity\tNb_In\tNInMask\tNOutMask\tNChan1Points\tNChan2Points\r\n');
+        fprintf(fID, 'CellNum\tROINum\tChannel\tClusterID\tNPoints\tNb\tMeanScore\tArea\tCircularity\tTotalAreaDensity\tAvRelativeDensity\tMeanDensity\tNb_In\tNInMask\tNOutMask\tNChan1Points\tNChan2Points\r\n');
 
         fmtStr = strcat(repmat('%d\t', 1, 6), repmat('%.4f\t', 1, 6), '%d\t%d\t%d\t%d\t%d\r\n');
         for k = 1:size(handles.ClusterTable, 1)

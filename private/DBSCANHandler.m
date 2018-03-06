@@ -77,8 +77,12 @@ try
             
             if nargin == 10
                 Density = varargin{7}; % Data is an input
-                DoCScore = varargin{8};
-                printOutFigDest = sprintf('Clus-DoC Results%sDBSCAN Results', filesep);
+                Score = varargin{8};
+                if(DBSCANParams.Type == 'DoC')
+                    printOutFigDest = sprintf('Clus-DoC Results%sDBSCAN Results', filesep);
+                else
+                    printOutFigDest = sprintf('Clus-PoC Results%sDBSCAN Results', filesep);
+                end
             end
 
         end
@@ -234,13 +238,13 @@ try
                 if nargin == 10 % DoC analysis.  Vector of DoC scores for each point is an input.
 
                     ClusterSmooth{i,1}.Density = Density(class == i);%
-                    ClusterSmooth{i,1}.MeanDoC = mean(DoCScore(class == i));
+                    ClusterSmooth{i,1}.MeanScore = mean(Score(class == i));
 
-                    Point_In = xin(DoCScore(class == i) >= DBSCANParams.DoCThreshold, 1:2);
+                    Point_In = xin(Score(class == i) >= DBSCANParams.ScoreThreshold, 1:2);
                     Nb_In = size(Point_In,1);
 
                     if Nb_In > 1
-                        Density20_In = Density20(DoCScore(class == i) >= DBSCANParams.DoCThreshold);
+                        Density20_In = Density20(Score(class == i) >= DBSCANParams.ScoreThreshold);
     %                     [Contour_In] = Smoothing_fun4clusterV3_3(Point_In, 0,0);
 
                         [~,  ~, ~, ~, Contour_In, ~, ~] = Smoothing_fun4cluster(Point_In, DBSCANParams, 0, 0);
@@ -255,7 +259,7 @@ try
     %                     plot(ax1,Contour_In(:,1),Contour_In(:,2),'r');
 
     %                     DoCOut = Data_DoCi(Data_DoCi.DoC<0.4,:);
-                        Density20_Out = Density20(DoCScore(class == i) >= DBSCANParams.DoCThreshold);
+                        Density20_Out = Density20(Score(class == i) >= DBSCANParams.ScoreThreshold);
 
                         Nb_Out = length(Density20_Out);
                         ClusterSmooth{i,1}.Nb_Out = Nb_Out;

@@ -39,6 +39,7 @@ Added columns in output files (version 1.0.0, without combined data processing)
 Some columns are added to store results for combined data (avoiding conflicting with results of channel 1 or 2)
 
 - N+9				CombinedClusterID
+- N+10				PoCScore
 
 
 ## Cluster output table (DBSCAN)

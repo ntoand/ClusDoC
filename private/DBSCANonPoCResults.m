@@ -1,4 +1,4 @@
-function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, ClusterSmoothTableCombined, clusterIDOut, clusterTable] = DBSCANonDoCResults(CellData, ROICoordinates, Path_name, ...
+function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, ClusterSmoothTableCombined, clusterIDOut, clusterTable] = DBSCANonPoCResults(CellData, ROICoordinates, Path_name, ...
     Chan1Color, Chan2Color, dbscanParamsPassed, NDatacolumns, CombinedColor, IsCombined)
 % Routine to apply DBSCAN on the Degree of Colocalisation Result for
 
@@ -65,7 +65,7 @@ function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, ClusterSmoothTableCombin
                     dbscanParams = dbscanParamsPassed(Ch);
                     dbscanParams.CurrentChannel = Ch;
                     dbscanParams.IsCombined = IsCombined;
-                    dbscanParams.Type = 'DoC';
+                    dbscanParams.Type = 'PoC';
 
                     if Ch == 1
                         clusterColor = Chan1Color;
@@ -81,10 +81,10 @@ function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, ClusterSmoothTableCombin
 
                     % [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHandler(Data, ...
                     % DBSCANParams, cellNum, ROINum, display1, display2, clusterColor, InOutMaskVector, Density, DoCScore)
-
+                    Density = zeros(size(Data_DoC1, 1), 1);
                     [~, ClusterCh, ~, classOut, ~, ~, ~, ResultCell{roiIter, cellIter}] = DBSCANHandler(Data_DoC1(:,5:6), ...
-                        dbscanParams, cellIter, roiIter, true, false, clusterColor, Data_DoC1(:, NDatacolumns + 2), Data_DoC1(:, NDatacolumns + 6), ...
-                        Data_DoC1(:, NDatacolumns + 4));
+                        dbscanParams, cellIter, roiIter, true, false, clusterColor, Data_DoC1(:, NDatacolumns + 2), Density, ...
+                        Data_DoC1(:, NDatacolumns + 10));
 
                     roi = ROICoordinates{cellIter}{roiIter};
                     cellROIPair = [cellROIPair; cellIter, roiIter, roi(1,1), roi(1,2), polyarea(roi(:,1), roi(:,2))];
@@ -196,7 +196,7 @@ function clusterTableOut = AppendToClusterTableInternal(clusterTable, Ch, cellIt
         appendTable(:, 6) = cellfun(@(x) x.Nb, ClusterCh); % Nb
 
         if isfield(ClusterCh{1}, 'MeanScore')
-            appendTable(:, 7) = cellfun(@(x) x.MeanScore, ClusterCh); % MeanDoCScore
+            appendTable(:, 7) = cellfun(@(x) x.MeanScore, ClusterCh); % MeanPoCScore
         end
 
         appendTable(:, 8) = cellfun(@(x) x.Area, ClusterCh); % Area
