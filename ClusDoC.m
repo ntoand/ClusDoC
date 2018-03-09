@@ -2,7 +2,7 @@ function ClusDoC(varargin)
     version = '1.0.0';
     fprintf('Clus-DoC version %s\n', version);
     close all; % for easier debugging
-    DEBUG = true;
+    DEBUG = false;
     if(DEBUG)
         addpath('dev'); % "ln -s private dev" to debug line by line in private funcs
     end
