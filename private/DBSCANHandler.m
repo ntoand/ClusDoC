@@ -106,7 +106,7 @@ try
             varargout{1} = fig1;
             ax1 = axes('parent',fig1);
             set(ax1, 'NextPlot', 'add');
-            plot(ax1, Data(:,1), Data(:,2), 'Marker', '.', 'MarkerSize', 5, 'LineStyle', 'none', 'color', rgb(127, 140, 141)); 
+            plot(ax1, Data(:,1), Data(:,2), 'Marker', '.', 'MarkerSize', 5, 'LineStyle', 'none', 'color', rgb(127, 140, 141));
             axis image tight
         end
 
@@ -192,7 +192,7 @@ try
                 end
 
                 xin = datathr(class == i,:); % Positions contained in the cluster i
-
+                
         %         assignin('base', 'xin', xin);
 
                 if display1 || ~printOutFig
@@ -290,12 +290,12 @@ try
 
                 % Plot the contour
                 if display1 || ~printOutFig
-
-                    if length(Nb) > DBSCANParams.Cutoff % Does this switch do anything?
-                        plot(ax1, contour(:,1), contour(:,2), 'color', 'red');
-                        set(ax1, 'box', 'on', 'XTickLabel', [], 'XTick', [], 'YTickLabel', [], 'YTick', []);
+                    %if length(Nb) > DBSCANParams.Cutoff % Does this switch do anything?
+                    if Nb > DBSCANParams.Cutoff
+                        plot(ax1, contour(:,1), contour(:,2), 'color', 'red', 'LineWidth',2);
+                        %set(ax1, 'box', 'on', 'XTickLabel', [], 'XTick', [], 'YTickLabel', [], 'YTick', []);
                     else
-                        plot(ax1, contour(:,1), contour(:,2), 'color', rgb(44, 62, 80));
+                        plot(ax1, contour(:,1), contour(:,2), 'color', rgb(44, 62, 80), 'LineWidth',2);
                     end
                 end
 

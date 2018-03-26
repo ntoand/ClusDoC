@@ -1665,7 +1665,7 @@ function returnValue = setDBSCANParameters(handles, withstats)
         
      	handles.DBSCAN(oldCh).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
         handles.DBSCAN(oldCh).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(oldCh).cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+        handles.DBSCAN(oldCh).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
         handles.DBSCAN(oldCh).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
         handles.DBSCAN(oldCh).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
         handles.DBSCAN(oldCh).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
@@ -1700,7 +1700,7 @@ function returnValue = setDBSCANParameters(handles, withstats)
         % Collect inputs and set parameters in guidata
      	handles.DBSCAN(ch).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
         handles.DBSCAN(ch).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(ch).cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+        handles.DBSCAN(ch).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
         handles.DBSCAN(ch).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
         handles.DBSCAN(ch).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
         handles.DBSCAN(ch).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
@@ -1970,7 +1970,7 @@ function returnValue = setDoCParameters(handles)
         
      	handles.DBSCAN(oldCh).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
         handles.DBSCAN(oldCh).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(oldCh).cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+        handles.DBSCAN(oldCh).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
         handles.DBSCAN(oldCh).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
         handles.DBSCAN(oldCh).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
         handles.DBSCAN(oldCh).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
@@ -2013,7 +2013,7 @@ function returnValue = setDoCParameters(handles)
         % Collect inputs and set parameters in guidata
      	handles.DBSCAN(ch).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
         handles.DBSCAN(ch).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(ch).cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+        handles.DBSCAN(ch).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
         handles.DBSCAN(ch).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
         handles.DBSCAN(ch).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
         handles.DBSCAN(ch).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
@@ -2285,7 +2285,7 @@ function returnValue = setPoCParameters(handles)
         
      	handles.DBSCAN(oldCh).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
         handles.DBSCAN(oldCh).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(oldCh).cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+        handles.DBSCAN(oldCh).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
         handles.DBSCAN(oldCh).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
         handles.DBSCAN(oldCh).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
         handles.DBSCAN(oldCh).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
@@ -2328,7 +2328,7 @@ function returnValue = setPoCParameters(handles)
         % Collect inputs and set parameters in guidata
      	handles.DBSCAN(ch).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
         handles.DBSCAN(ch).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(ch).cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+        handles.DBSCAN(ch).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
         handles.DBSCAN(ch).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
         handles.DBSCAN(ch).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
         handles.DBSCAN(ch).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
