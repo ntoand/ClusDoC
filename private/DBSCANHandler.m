@@ -292,10 +292,10 @@ try
                 if display1 || ~printOutFig
                     %if length(Nb) > DBSCANParams.Cutoff % Does this switch do anything?
                     if Nb > DBSCANParams.Cutoff
-                        plot(ax1, contour(:,1), contour(:,2), 'color', 'red', 'LineWidth',2);
+                        plot(ax1, contour(:,1), contour(:,2), 'color', 'red');
                         %set(ax1, 'box', 'on', 'XTickLabel', [], 'XTick', [], 'YTickLabel', [], 'YTick', []);
                     else
-                        plot(ax1, contour(:,1), contour(:,2), 'color', rgb(44, 62, 80), 'LineWidth',2);
+                        plot(ax1, contour(:,1), contour(:,2), 'color', rgb(44, 62, 80));
                     end
                 end
 
