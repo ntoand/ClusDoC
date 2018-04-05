@@ -190,11 +190,9 @@ try
                     str = sprintf('Processing cluster %d/%d...', i, MaxClass);
                     UpdateMainStatusBar(str);
                 end
-
+                
                 xin = datathr(class == i,:); % Positions contained in the cluster i
                 
-        %         assignin('base', 'xin', xin);
-
                 if display1 || ~printOutFig
                     plot(ax1,xin(:,1), xin(:,2),'Marker', '.', 'MarkerSize', 5,'LineStyle', 'none', 'color', clusterColor);
                 end   
@@ -204,6 +202,26 @@ try
 
                 [ClusImage,  Area, Circularity, Nb, contour, edges, Cutoff_point] = Smoothing_fun4cluster(xin(:,1:2), DBSCANParams, false, false); % 0.1*max intensity 
 
+                % toand added 2018.04 - find boundary using alpha shape to
+                % cover all points
+                xmin = min(xin(:,1));
+                xmax = max(xin(:,1));
+                ymin = min(xin(:,2));
+                ymax = max(xin(:,2));
+                minsize = min ( (xmax-xmin)/2, (ymax-ymin)/2 );
+                maxsize = max ( (xmax-xmin)/2, (ymax-ymin)/2 );    
+                if (maxsize > 200)
+                    [~, S] = alphavol(xin(:,1:2), minsize, 0);
+                    ClusterSmooth{i,1}.Boundary = S.bnd;
+                    xcol = xin(:, 1);
+                    ycol = xin(:, 2);
+                    xcol = xcol(S.bnd);
+                    ycol = ycol(S.bnd);
+                    %contour = [ [xcol(:, 1) ycol(:, 1) ]; [xcol(:, 2) ycol(:, 2) ] ];
+                    contour = [ [xcol(:, 1) ycol(:, 1) ]; [xcol(1, 1) ycol(1, 1) ] ];
+                end
+                % end toand added
+                
                 ClusterSmooth{i,1}.ClusterID = i;
                 ClusterSmooth{i,1}.Points = xin(:,1:2);
                 ClusterSmooth{i,1}.Image = ClusImage;
@@ -220,12 +238,9 @@ try
                 ClusterSmooth{i,1}.NOutsideMask = sum(~maskVector(class == i));
 
                 ClusterSmooth{i,1}.Density20 = Density20;%
-
                 ClusterSmooth{i,1}.RelativeDensity20 = Density20 / AvDensity;%
-
-
                 ClusterSmooth{i,1}.AvRelativeDensity20 = mean(Density20/AvDensity); %
-
+         
                 if DBSCANParams.UseLr_rThresh
                     ClusterSmooth{i,1}.Density = Density(class == i);%
                     ClusterSmooth{i,1}.RelativeDensity = Density(class == i)/AvDensity;%
@@ -234,7 +249,7 @@ try
                     ClusterSmooth{i,1}.AvRelativeDensity = mean(Density(class == i)/AvDensity);%
 
                 end
-
+             
                 if nargin == 10 % DoC analysis.  Vector of DoC scores for each point is an input.
 
                     ClusterSmooth{i,1}.Density = Density(class == i);%
@@ -292,7 +307,11 @@ try
                 if display1 || ~printOutFig
                     %if length(Nb) > DBSCANParams.Cutoff % Does this switch do anything?
                     if Nb > DBSCANParams.Cutoff
-                        plot(ax1, contour(:,1), contour(:,2), 'color', 'red');
+                        color = [1, 0, 0];
+                        if(clusterColor(1) > 0.5)
+                            color = [0, 0, 1];
+                        end
+                        plot(ax1, contour(:,1), contour(:,2), 'color', color);
                         %set(ax1, 'box', 'on', 'XTickLabel', [], 'XTick', [], 'YTickLabel', [], 'YTick', []);
                     else
                         plot(ax1, contour(:,1), contour(:,2), 'color', rgb(44, 62, 80));
