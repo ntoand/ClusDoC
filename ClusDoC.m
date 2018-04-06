@@ -280,7 +280,7 @@ function DoCGUIInitialize(varargin)
     w1=1-2*space2;
     xbutton=space2;
     ybutton=ybutton-h1-space1;
-    handles.handles.hPoC_All1 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Run PoC',...
+    handles.handles.hPoC_All1 = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Run Clus-PoC',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @RunPoC, 'Tag', 'DoC_All','enable','off');
     
     % Button Results Explorer
