@@ -16,7 +16,9 @@ function ClusDoC(varargin)
 end
 
 function UpdateStatusBar(handles, str)
+    warning('off');
     statusbar(handles.handles.MainFig, str);
+    warning('on');
 end
 
 function CreateDir(path)

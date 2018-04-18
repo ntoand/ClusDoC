@@ -183,6 +183,10 @@ try
             
         else
             
+            % save data for testing coutour method
+            name = sprintf('test_dataset/clusters_example_ch%d', datathr(1, 5));
+            save(name, 'class', 'datathr');
+            
             MaxClass = max(class);
             for i = 1:MaxClass
                 
@@ -202,25 +206,6 @@ try
 
                 [ClusImage,  Area, Circularity, Nb, contour, edges, Cutoff_point] = Smoothing_fun4cluster(xin(:,1:2), DBSCANParams, false, false); % 0.1*max intensity 
 
-                % toand added 2018.04 - find boundary using alpha shape to
-                % cover all points
-                xmin = min(xin(:,1));
-                xmax = max(xin(:,1));
-                ymin = min(xin(:,2));
-                ymax = max(xin(:,2));
-                minsize = min ( (xmax-xmin)/2, (ymax-ymin)/2 );
-                maxsize = max ( (xmax-xmin)/2, (ymax-ymin)/2 );    
-                if (maxsize > 200)
-                    [~, S] = alphavol(xin(:,1:2), minsize, 0);
-                    ClusterSmooth{i,1}.Boundary = S.bnd;
-                    xcol = xin(:, 1);
-                    ycol = xin(:, 2);
-                    xcol = xcol(S.bnd);
-                    ycol = ycol(S.bnd);
-                    %contour = [ [xcol(:, 1) ycol(:, 1) ]; [xcol(:, 2) ycol(:, 2) ] ];
-                    contour = [ [xcol(:, 1) ycol(:, 1) ]; [xcol(1, 1) ycol(1, 1) ] ];
-                end
-                % end toand added
                 
                 ClusterSmooth{i,1}.ClusterID = i;
                 ClusterSmooth{i,1}.Points = xin(:,1:2);

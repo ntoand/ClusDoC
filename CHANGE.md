@@ -2,7 +2,6 @@
 
 **for v1.0.1**
 
-- Using alpha shape to find contours for big clusters because the current method only works with small clusters
 - Fix bug in loadMaskFiles when there is no mask tif file
 - Rearrange GUI controls
 - Fix bugs in DBSCAN when running with Lr_r=off and Stat=on
