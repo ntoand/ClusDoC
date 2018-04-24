@@ -46,13 +46,13 @@ for fN = 1:length(handles.CellData)
         fprintf(fID, '# MaskFile: %s\r\n', 'NoMask');
     end
 
-    fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN.epsilon);
-    fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN.minPts);
+    fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN.Epsilon);
+    fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN.MinPts);
     fprintf(fID, '# DBSCANUseLr_Thresh: %d\r\n', handles.DBSCAN.UseLr_rThresh);
     fprintf(fID, '# DBSCANLr_rThreshRad: %.2f\r\n', handles.DBSCAN.Lr_rThreshRad);
     fprintf(fID, '# DBSCANSmoothingRad: %.2f\r\n', handles.DBSCAN.SmoothingRad);
     fprintf(fID, '# DBSCANCutoff: %.2f\r\n', handles.DBSCAN.Cutoff);
-    fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN.threads);
+    fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN.Threads);
     fprintf(fID, '# DoCLr_rRad: %.2f\r\n', handles.DoC.Lr_rRad);
     fprintf(fID, '# DoCRmax: %d\r\n', handles.DoC.Rmax);
     fprintf(fID, '# DoCStep: %d\r\n', handles.DoC.Step);

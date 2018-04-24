@@ -6,15 +6,15 @@ function [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHan
     % Check if clustering is even possible on this dataset.  
     % If no clustering can be achieved, there is a chance that the MEX file
     % will fail and crash MATLAB.  
-    % To pass test, there have to be at least DBSCANParams.minPts points
-    % that are within DBSCANParams.epsilon distance from other points.  
+    % To pass test, there have to be at least DBSCANParams.MinPts points
+    % that are within DBSCANParams.Epsilon distance from other points.  
     
     % !!!Cannot check for big dataset due to memory issue
     if(size(Data, 1) < 10000)
         UpdateMainStatusBar('Checking if clustering is even possible on this dataset...');
         distRow = pdist(Data(:,1:2));
-        nPossibleClustering = sum(distRow < DBSCANParams.epsilon);
-        if nPossibleClustering >= DBSCANParams.minPts
+        nPossibleClustering = sum(distRow < DBSCANParams.Epsilon);
+        if nPossibleClustering >= DBSCANParams.MinPts
             checkClusterTest = true;
         else
             checkClusterTest = false;
@@ -51,6 +51,9 @@ try
         % display2)
         
         classOut = zeros(size(Data, 1), 1);
+        if(DBSCANParams.settings.ShowScalebar)
+            MaxSize = max(Data(:, 1));
+        end
 
         if nargin == 3
             % Test mode
@@ -154,7 +157,7 @@ try
             datathr = Data(dataThreshVector, 1:2);
         end
         
-        if nargout == 9;
+        if nargout == 9
             disp('export dataThreshVector');
             varargout{5} = dataThreshVector;
         end
@@ -165,7 +168,7 @@ try
 
         % FAST DBSCAN CALL
 
-        class = pdsdbscan(datathr(:,1), datathr(:, 2), DBSCANParams.minPts, DBSCANParams.epsilon, DBSCANParams.threads);
+        class = pdsdbscan(datathr(:,1), datathr(:, 2), DBSCANParams.MinPts, DBSCANParams.Epsilon, DBSCANParams.Threads);
         classOut(dataThreshVector) = class;
         classOut(~dataThreshVector) = -1;
 
@@ -183,11 +186,17 @@ try
             
         else
             
+            % for DEBUG only
             % save data for testing coutour method
-            name = sprintf('test_dataset/clusters_example_ch%d', datathr(1, 5));
-            save(name, 'class', 'datathr');
+            %name = sprintf('test_dataset/clusters_example_ch%d', datathr(1, 5));
+            %save(name, 'class', 'datathr');
             
             MaxClass = max(class);
+            
+            if(DBSCANParams.ColorForClusters)
+                colors = distinguishable_colors(MaxClass);
+            end
+            
             for i = 1:MaxClass
                 
                 if(mod(i, 100) == 0)
@@ -198,7 +207,12 @@ try
                 xin = datathr(class == i,:); % Positions contained in the cluster i
                 
                 if display1 || ~printOutFig
-                    plot(ax1,xin(:,1), xin(:,2),'Marker', '.', 'MarkerSize', 5,'LineStyle', 'none', 'color', clusterColor);
+                    if(DBSCANParams.ColorForClusters)
+                        ccolor = colors(i, :);
+                    else
+                        ccolor = clusterColor;
+                    end
+                    plot(ax1,xin(:,1), xin(:,2),'Marker', '.', 'MarkerSize', 5,'LineStyle', 'none', 'color', ccolor);
                 end   
 
                 [dataT, idxT, DisT, Density20 ] = Lr_fun(xin(:,1), xin(:,2), xin(:,1), xin(:,2) , 20, SizeROI); % Included in FunDBSCAN4DoC_GUIV2
@@ -234,6 +248,17 @@ try
                     ClusterSmooth{i,1}.AvRelativeDensity = mean(Density(class == i)/AvDensity);%
 
                 end
+                
+                % Toan Nguyen - alpha shape implementation - begin
+                showAlphaShape = true;
+                if(DBSCANParams.ContourMethod == 2)
+                    alpha = alphaShape(xin(:, 1), xin(:, 2));
+                    alpha.HoleThreshold = 1e5;
+                    if area(alpha) == 0
+                        showAlphaShape = false;
+                    end
+                end
+                % Toan Nguyen - alpha shape implementation - end
              
                 if nargin == 10 % DoC analysis.  Vector of DoC scores for each point is an input.
 
@@ -290,18 +315,25 @@ try
 
                 % Plot the contour
                 if display1 || ~printOutFig
-                    %if length(Nb) > DBSCANParams.Cutoff % Does this switch do anything?
+                    
+                    color = rgb(44, 62, 80);
                     if Nb > DBSCANParams.Cutoff
                         color = [1, 0, 0];
                         if(clusterColor(1) > 0.5)
                             color = [0, 0, 1];
                         end
-                        plot(ax1, contour(:,1), contour(:,2), 'color', color);
-                        %set(ax1, 'box', 'on', 'XTickLabel', [], 'XTick', [], 'YTickLabel', [], 'YTick', []);
-                    else
-                        plot(ax1, contour(:,1), contour(:,2), 'color', rgb(44, 62, 80));
                     end
-                end
+                    
+                    if(DBSCANParams.ContourMethod == 1 || showAlphaShape == false)
+                        plot(ax1, contour(:,1), contour(:,2), 'color', color);
+                    else
+                        plot(alpha, 'FaceColor','red','FaceAlpha',0.4, 'edgecolor', 'red');
+                        if(DBSCANParams.settings.DrawPointOnAlphaShape ~= 0)
+                            plot(ax1,xin(:,1), xin(:,2),'Marker', '.', 'MarkerSize', 5,'LineStyle', 'none', 'color', ccolor);
+                        end
+                    end % contour method
+                    
+                end % end display1
 
             end
         end
@@ -315,8 +347,11 @@ try
         set(ax1, 'box', 'on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
         set(fig1, 'Color', [1 1 1], 'Tag', 'ClusDoC')
         if printOutFig
-        print(fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cluster maps', Name), fig1, '-dtiff');
-        close(fig1);
+            if(DBSCANParams.settings.ShowScalebar)
+                scalebar(ax1, MaxSize);
+            end
+            print(fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cluster maps', Name), fig1, '-dtiff');
+            close(fig1);
         end
 
         %      s=cellfun('size', Cluster,1); % sort cluster by size
@@ -354,6 +389,9 @@ try
             set(fig2, 'Color', [1 1 1], 'Tag', 'ClusDoC')
 
             Name = strcat('Cell',num2str(cellNum),'_Region',num2str(ROINum), '_Density_map.tif');
+            if(DBSCANParams.settings.ShowScalebar)
+                scalebar(ax2, MaxSize);
+            end
             print(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
                 dirname, 'Cluster density maps', Name), fig2, '-dtiff');
             close(fig2);
@@ -381,6 +419,9 @@ try
             set(fig3, 'Color', [1 1 1], 'Tag', 'ClusDoC');
 
             Name = strcat('Cell',num2str(cellNum),'_Region',num2str(ROINum), '_Norm_Density_map.tif');
+            if(DBSCANParams.settings.ShowScalebar)
+                scalebar(ax3, MaxSize);
+            end
             print(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
                 dirname, 'Cluster density maps', Name), fig3, '-dtiff');
             close(fig3);

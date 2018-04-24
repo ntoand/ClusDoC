@@ -22,7 +22,7 @@ function [ClusImage,  AreaC, Circularity, Nb, Contour, edges, Cutoff_point] = Sm
     
     xcenter = (xmax + xmin)/2;
     ycenter = (ymax + ymin)/2;
-    epsilon = DBSCANParams.epsilon;              
+    epsilon = DBSCANParams.Epsilon;              
     xminbox = xcenter - (0.5*boxsize + epsilon + 10);
     xmaxbox = xcenter + (0.5*boxsize + epsilon + 10);
     yminbox = ycenter - (0.5*boxsize + epsilon + 10);

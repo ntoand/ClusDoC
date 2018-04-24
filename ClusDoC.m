@@ -1,8 +1,7 @@
 function ClusDoC(varargin)
-    version = '1.0.0';
-    fprintf('Clus-DoC version %s\n', version);
     close all; % for easier debugging
-    DEBUG = false;
+    clear;
+    DEBUG = true;
     if(DEBUG)
         addpath('dev'); % "ln -s private dev" to debug line by line in private funcs
     end
@@ -15,6 +14,7 @@ function ClusDoC(varargin)
     end
 end
 
+% utilities ---- begin
 function UpdateStatusBar(handles, str)
     warning('off');
     statusbar(handles.handles.MainFig, str);
@@ -27,27 +27,75 @@ function CreateDir(path)
     end
 end
 
+function settings = LoadSettings()
+    settings.Version = 'v1.0.0';
+    settings.ShowScalebar = 1;
+    settings.RoiSize = 5000;
+    settings.DrawPointOnAlphaShape = 0;
+
+    f = fopen('settings.ini', 'rt');
+    while(~feof(f))
+        line = fgets(f);
+        if isempty(line)
+            continue;
+        end
+        line = strtrim(line);
+        C = strsplit(line, ':');
+        if (numel(C) ~= 2)
+            continue;
+        end
+        C{1} = strtrim(C{1});
+        C{2} = strtrim(C{2});
+        if strcmp(C{1}, 'version')
+            settings.Version = C{2};
+        elseif strcmp(C{1}, 'show_scalebar')
+            settings.ShowScalebar = floor(str2double(C{2}));
+        elseif strcmp(C{1}, 'roi_size_when_create_roi_by_click')
+            settings.RoiSize = floor(str2double(C{2}));
+        elseif strcmp(C{1}, 'draw_cluster_points_on_alpha_shape')
+            settings.DrawPointOnAlphaShape = floor(str2double(C{2}));
+        end
+    end
+    fclose(f);
+end
+
+function SaveSettings(handles)
+    f = fopen('settings.ini', 'wt');
+    fprintf(f, 'version: %s\n', handles.settings.Version);
+    fprintf(f, 'roi_size_when_create_roi_by_click: %d\n', handles.settings.RoiSize);
+    fprintf(f, 'show_scalebar: %d\n', handles.settings.ShowScalebar);
+    fprintf(f, 'draw_cluster_points_on_alpha_shape: %d\n', handles.settings.DrawPointOnAlphaShape);
+    fclose(f);
+end
+
+% utilities ---- end
+
 function DoCGUIInitialize(varargin)
 
     figObj = findobj('Tag', 'PALM GUI');
+    settings = LoadSettings();
+    
     if ~isempty(figObj) % If figure already exists, clear it out and reset it.
         clf(figObj);
         handles = guidata(figObj);
         fig1 = figObj;
     else
-        %fig1 = figure('Name','Clus-DoC', 'Tag', 'PALM GUI', 'Units', 'pixels',...
-        %    'Position',[700 150 924 780], 'color', [1 1 1]);%'Position',[0.05 0.3 760/scrsz(3) 650/scrsz(4)] );
+        WIDTH = 924;
+        HEIGHT = 780;
         ss = get(0,'screensize');
-        left = (ss(3) - 924) / 2;
-        bottom = (ss(4) - 810) / 2;
-        fig1 = figure('Name','Clus-DoC', 'Tag', 'PALM GUI', 'Units', 'pixels',...
-            'Position',[left bottom 924 780], 'color', [1 1 1]);%'Position',[0.05 0.3 760/scrsz(3) 650/scrsz(4)] );
+        left = (ss(3) - WIDTH) / 2;
+        bottom = (ss(4) - HEIGHT) / 2;
+        title = sprintf('Clus-Doc %s', settings.Version);
+        fig1 = figure('Name',title, 'Tag', 'PALM GUI', 'Units', 'pixels',...
+            'Position',[left bottom WIDTH HEIGHT], 'color', [1 1 1]);%'Position',[0.05 0.3 760/scrsz(3) 650/scrsz(4)] );
         
         set(fig1, 'CloseRequestFcn', @CloseGUIFunction);
 
         handles.handles.MainFig = fig1;
     end
     handles.DEBUG = varargin{1};
+    handles.settings = settings;
+    fprintf('Clus-DoC version %s\n', settings.Version);
 
     panel_border = 680/925-0.01;
     
@@ -56,8 +104,10 @@ function DoCGUIInitialize(varargin)
     currPath = fileparts(currFileName);   
 
 	[SquareSelectIcon, ~] = imread(fullfile(currPath, 'private', 'SquareROIIcon.jpg'));
+    [SquareClickSelectIcon, ~] = imread(fullfile(currPath, 'private', 'SquareClickROIIcon.jpg'));
 	[PolySelectIcon, ~] = imread(fullfile(currPath, 'private', 'PolyROIIcon.jpg'));
 
+    
     handles.handles.b_panel = uipanel(fig1, 'Units', 'normalized', 'Position', [0 0.05, 1-panel_border, 0.90], ...
         'BackgroundColor', [1 1 1], 'BorderType', 'none', 'Tag', 'b_panel');
 
@@ -82,6 +132,11 @@ function DoCGUIInitialize(varargin)
     handles.handles.Load_text = uicontrol(handles.handles.loadPanel, 'Style', 'edit', 'Units', 'normalized', ...
         'Position',[0.200    0.6967    0.6000    0.2264], 'BackgroundColor', [1 1 1], ...
         'String', 'Input File(s)', 'Callback', @Load_edit, 'Tag', 'Load_textbox');
+    
+    % setting button
+    handles.handles.hSettings =     uicontrol(handles.handles.loadPanel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Setings',...
+        'Position', [0.91    0.6710    0.08    0.2890],...
+        'Callback', @onSetingsClick);
 
     handles.handles.CoordinatesSet =     uicontrol(handles.handles.loadPanel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Select Coordinates File',...
         'Position', [0.01    0.3610    0.1500    0.2890],...
@@ -190,14 +245,18 @@ function DoCGUIInitialize(varargin)
         'Position',[xbutton2 ybutton2 w2 h2],'Callback', @CreateSquareROI, 'Tag', 'CreateSquareROI','enable','off');
     
     xbutton3 = xbutton2+w2+space2;
+    handles.handles.hCreateSquareClickROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'CData', SquareClickSelectIcon,...
+        'Position',[xbutton3 ybutton2 w2 h2],'Callback', @CreateSquareClickROI, 'enable','off');
+    
+    xbutton4 = xbutton3+w2+space2;
 	handles.handles.hCreatePolyROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'CData', PolySelectIcon,...
-        'Position',[xbutton3 ybutton2 w2 h2],'Callback', @CreatePolyROI, 'Tag', 'CreatePolyROI','enable','off');
-
+        'Position',[xbutton4 ybutton2 w2 h2],'Callback', @CreatePolyROI, 'Tag', 'CreatePolyROI','enable','off');
+    
     % Save Cells and ROIs set
-    xbutton4 = xbutton3 + w2 + 2*space2;
-    w4 = 1 - xbutton4;
+    xbutton5 = xbutton4+w2+space1;
+    w = 1-xbutton5; %xbutton4 - xbutton2 + w2;
     handles.handles.hSaveCellROI = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','pushbutton','String','Export ROIs',...
-        'Position',[xbutton4 ybutton2 w4 h2],'Callback', @SaveCellROI, 'Tag', 'SaveROI','enable','off');
+        'Position',[xbutton5 ybutton2 w h2],'Callback', @SaveCellROI, 'Tag', 'SaveROI','enable','off');
     
     
     % Popupmenu for selected Mask (4th row)
@@ -216,12 +275,11 @@ function DoCGUIInitialize(varargin)
         'Position', [xbutton2 ybutton2 w2 h2], 'Callback', @popupMask_Callback, 'Tag', 'SelectMask');
     
     % Align mask to cell data button (5th row)
-    w1 = 1 - xbutton4; 
+    w1 = 1 - xbutton2 -space1; 
     h1 = butt_height/2;
-    xbutton = xbutton4; % same as Export ROIs button
     ybutton = ybutton-(space1+h1)-h1/4 + butt_offset_y;
     handles.handles.alignMaskButton = uicontrol(handles.handles.b_panel, 'Units', 'normalized','Style','pushbutton','String','Align Mask',...
-        'Position',[xbutton ybutton w1 h1],'Callback', @alignMask, 'Tag', 'AlignMask','enable','off');
+        'Position',[xbutton2 ybutton w1 h1],'Callback', @alignMask, 'Tag', 'AlignMask','enable','off');
     
     
     % Select data to process (new row)
@@ -286,12 +344,16 @@ function DoCGUIInitialize(varargin)
         'Position', [xbutton ybutton w1 h1], 'Callback', @RunPoC, 'Tag', 'DoC_All','enable','off');
     
     % Button Results Explorer
+    %{
     h1=butt_height/2;
     w1=1-2*space2;
     xbutton=space2;
     ybutton=ybutton-h1-space1 -h1; % -h1 to add some space between rows
     handles.handles.ResultsExplorerButton = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Results Explorer',...
         'Position', [xbutton ybutton w1 h1], 'Callback', @ResultsExplorerPush, 'Tag', 'ResultsExplorer', 'enable', 'off', 'visible', 'off');
+    %}
+    % add some space
+    ybutton = ybutton - space1;
     
     % Export checkbox
     h1=butt_height/2;
@@ -316,7 +378,7 @@ function DoCGUIInitialize(varargin)
     xbutton=space2;
     ybutton=ybutton-space2 -h1; % -h1 to add some space between rows
     handles.handles.hreset = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Reset',...
-        'Position', [xbutton ybutton w1 h1], 'Callback', @Reset, 'Tag', 'Reset','enable','on');
+        'Position', [xbutton ybutton w1 h1], 'Callback', @Reset, 'Tag', 'Reset','enable','on', 'visible', 'off');
 
     % End of buttons
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -385,14 +447,17 @@ function initializeParameters(varargin)
     % Default DBSCAN parameters
     % for channel1, channel2, combined data
     for k = 1:3
-        handles.DBSCAN(k).epsilon = 20;
-        handles.DBSCAN(k).minPts = 3;
+        handles.DBSCAN(k).Epsilon = 20;
+        handles.DBSCAN(k).MinPts = 3;
         handles.DBSCAN(k).UseLr_rThresh = true;
         handles.DBSCAN(k).Lr_rThreshRad = 20;
-        handles.DBSCAN(k).SmoothingRad = 15;
         handles.DBSCAN(k).Cutoff = 10;
-        handles.DBSCAN(k).threads = 2;
+        handles.DBSCAN(k).Threads = 2;
         handles.DBSCAN(k).DoStats = true;
+        % plot
+        handles.DBSCAN(k).ColorForClusters = false;
+        handles.DBSCAN(k).ContourMethod = 1; % 1: smoothing, 2: alphaShape
+        handles.DBSCAN(k).SmoothingRad = 15;
     end
     
     % Default DoC parameters
@@ -503,6 +568,9 @@ function FunPlot(whichCell)
     set(handles.handles.ax_h, 'xtick', [], 'ytick', [], 'Position', [0.005 .01 .99 .955])
     set(handles.handles.ax_h, 'xlim', [0 handles.MaxSize], 'ylim', [0 handles.MaxSize]);
     axis image % Freezes axis aspect ratio to that of the initial image -
+    
+    % draw scale bar
+    scalebar(handles.handles.ax_h, handles.MaxSize);
     
     % Mask files
     handles.SelectedMask = handles.MaskCellPair(whichCell, 2);
@@ -689,8 +757,8 @@ function Load_Data(~,~,~)
     set(get(handles.handles.b_panel, 'children'), 'enable', 'off');
 
     if (handles.DEBUG)
-        fileName = '1.txt';
-        pathName = sprintf('%s/test_dataset/', pwd);
+        fileName = 'roi5_cut2_rpe1_dorsal_gal3_mab13_grouped_PALM_Channel Alignment.txt';
+        pathName = sprintf('%s/test_dataset/2/', pwd);
         filterIndex = 1;
     else
         [fileName, pathName, filterIndex] = uigetfile({'*.txt', 'ZEN export table'; '*.csv', 'ThunderSTORM Export table'},'Select ZEN export files', 'MultiSelect', 'on');
@@ -1226,6 +1294,7 @@ end
 function CreateSquareROI(~, ~, ~)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
+    UpdateStatusBar(handles, 'Create square ROI');
 
     rectHand = imrect('PositionConstraintFcn', @(x) [x(1) x(2) min(x(3),x(4))*[1 1]]);
     rectHand.addNewPositionCallback(@SquareROICallback);
@@ -1271,14 +1340,67 @@ function CreateSquareROI(~, ~, ~)
         handles.CellData = assignROIsToCellData(handles.CellData, handles.ROICoordinates, handles.NDataColumns);
         guidata(handles.handles.MainFig, handles);
         
+        UpdateStatusBar(handles, 'ROI added');
+        
     end
  
+end
+
+function CreateSquareClickROI(~, ~, ~)
+    handles = guidata(findobj('Tag', 'PALM GUI'));
+    
+    UpdateStatusBar(handles, 'Click to set a square ROI');
+    
+    pointHand = impoint(handles.handles.ax_h);
+    
+    newROInum = length(handles.ROICoordinates{handles.CurrentCellData}) + 1;
+    post = pointHand.getPosition();
+    size2 = handles.settings.RoiSize / 2;
+    
+    data = handles.CellData{handles.CurrentCellData};
+    minx = max(min(data(:, 5)), post(1)-size2);
+    maxx = min(max(data(:, 5)), post(1)+size2);
+    miny = max(min(data(:, 6)), post(2)-size2);
+    maxy = min(max(data(:, 6)), post(2)+size2);
+   
+    handles.ROICoordinates{handles.CurrentCellData}{newROInum} = round([minx, miny;
+                                                                        maxx, miny;
+                                                                        maxx, maxy;
+                                                                        minx, maxy;
+                                                                        minx, miny]);
+
+    if newROInum == 1
+        lastNumEntry = 0;
+    else
+        lastNumEntry = str2double(handles.ROIPopupList{handles.CurrentCellData}(end));
+    end
+
+    handles.ROIPopupList{handles.CurrentCellData}{newROInum} = num2str(lastNumEntry + 1);
+
+    handles.CurrentROIData = newROInum;
+    set(handles.handles.popupROI2, 'String', handles.ROIPopupList{handles.CurrentCellData});
+    set(handles.handles.popupROI2, 'Value', handles.CurrentROIData);
+
+    delete(pointHand);
+
+    guidata(handles.handles.MainFig, handles);
+    plotAllROIs(handles.CurrentCellData);
+
+    handles = guidata(handles.handles.MainFig);
+    handles.CellData = assignROIsToCellData(handles.CellData, handles.ROICoordinates, handles.NDataColumns);
+    guidata(handles.handles.MainFig, handles);
+
+    set(handles.handles.DeleteROI, 'enable', 'on');
+   
+    UpdateStatusBar(handles, 'ROI added');
 end
 
 
 function CreatePolyROI(~, ~, ~)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
+    
+    UpdateStatusBar(handles, 'Create polygon ROI');
 
     polyHand = impoly(handles.handles.ax_h);
     api = iptgetapi(polyHand);
@@ -1318,6 +1440,8 @@ function CreatePolyROI(~, ~, ~)
         handles = guidata(handles.handles.MainFig);
         handles.CellData = assignROIsToCellData(handles.CellData, handles.ROICoordinates, handles.NDataColumns);
         guidata(handles.handles.MainFig, handles);
+        
+        UpdateStatusBar(handles, 'ROI added');
     end
 
 end
@@ -1379,974 +1503,6 @@ function popupProcessType_Callback(varargin)
 end
 
 
-% Pop-up window to set RipleyK parameters
-function returnValue = setRipleyKParameters(handles)
-
-    handles.handles.RipleyKSettingsFig = figure();
-    set(handles.handles.RipleyKSettingsFig, 'Tag', 'ClusDoC');
-    resizeFig(handles.handles.RipleyKSettingsFig, [220 180]);
-    set(handles.handles.RipleyKSettingsFig, 'toolbar', 'none', 'menubar', 'none', ...
-        'name', 'Ripley K Parameters');
-  
-% 	handles.handles.RipleyKSettingsTitleText(2) = uicontrol('Style', 'text', ...
-%         'String', '_____________________', 'parent', handles.handles.RipleyKSettingsFig,...
-%         'Position', [0 153 220 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-
-	handles.handles.RipleyKSettingsTitleText(1) = uicontrol('Style', 'text', ...
-        'String', 'Ripley K Parameters', 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [0 158 220 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-    
-    handles.handles.RipleyKSettingsText(1) = uicontrol('Style', 'text', ...
-        'String', 'Start (nm):', 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [20 127 65 20]);
-    
-    handles.handles.RipleyKSettingsText(2) = uicontrol('Style', 'text', ...
-        'String', 'End (nm):', 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [20 97 65 20]);
-    
-    handles.handles.RipleyKSettingsText(3) = uicontrol('Style', 'text', ...
-        'String', 'Step (nm):', 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [20 67 65 20]);
-    
-    handles.handles.RipleyKSettingsText(4) = uicontrol('Style', 'text', ...
-        'String', 'Max Points:', 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [20 37 65 20]);
-    
-    handles.handles.RipleyKSettingsEdit(1) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.RipleyK.Start), 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [110 127 80 20]);
-    
-    handles.handles.RipleyKSettingsEdit(2) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.RipleyK.End), 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [110 97 80 20]);
-    
-    handles.handles.RipleyKSettingsEdit(3) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.RipleyK.Step), 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [110 67 80 20]);
-    
-    handles.handles.RipleyKSettingsEdit(4) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.RipleyK.MaxSampledPts), 'parent', handles.handles.RipleyKSettingsFig,...
-        'Position', [110 37 80 20]);
-    
-    set(handles.handles.RipleyKSettingsEdit, 'Callback', @RipleyKCheckEditBox);
-    
-    handles.handles.RipleyKSettingsButton = uicontrol('Style', 'pushbutton', ...
-        'String', 'Continue', 'parent', handles.handles.RipleyKSettingsFig, ...
-        'Position', [133 2 85 30], 'Callback', @RipleyKSetAndContinue);
-
-    set(handles.handles.RipleyKSettingsFig, 'CloseRequestFcn', @RipleyKCloseOutWindow);
-    
-    uiwait;
-    
-    function RipleyKCloseOutWindow(varargin)
-        % Cancel, don't execute further
-        returnValue = 0;
-        uiresume;
-        delete(handles.handles.RipleyKSettingsFig);
-    end
-
-    function RipleyKCheckEditBox(hObj, varargin)
-        
-        input = str2double(get(hObj,'string'));
-        if isnan(input) 
-            
-            errordlg('You must enter a numeric value','Invalid Input','modal');
-%             return;
-        elseif input < 0
-            
-            errordlg('Value must be positive','Invalid Input','modal');
-%             return;
-        else
-            % continue
-        end
-
-    end
-
-    function RipleyKSetAndContinue(varargin)
-        
-        % Collect inputs and set parameters in guidata
-     	handles.RipleyK.Start = str2double(get(handles.handles.RipleyKSettingsEdit(1),'string'));
-        handles.RipleyK.End = str2double(get(handles.handles.RipleyKSettingsEdit(2),'string'));
-        handles.RipleyK.Step = str2double(get(handles.handles.RipleyKSettingsEdit(3),'string'));
-        handles.RipleyK.MaxSampledPts = str2double(get(handles.handles.RipleyKSettingsEdit(4),'string'));
-                
-        returnValue = 1;
-        guidata(handles.handles.MainFig, handles);
-        uiresume;
-        delete(handles.handles.RipleyKSettingsFig);
-        
-    end
-    
-end
-
-
-% Pop-up window to set DBSCAN parameters
-function returnValue = setDBSCANParameters(handles, withstats)
-
-    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
-
-    handles.handles.DBSCANSettingsFig = figure();
-    set(handles.handles.DBSCANSettingsFig, 'Tag', 'ClusDoC');
-    resizeFig(handles.handles.DBSCANSettingsFig, [250 240]);
-    set(handles.handles.DBSCANSettingsFig, 'toolbar', 'none', 'menubar', 'none', ...
-        'name', 'DBSCAN Parameters');
-        
-% 	handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
-%         'String', '_____________________', 'parent', handles.handles.DBSCANSettingsFig,...
-%         'Position', [0 215 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-
-    str = 'DBSCAN Parameters for channels';
-    if(isCombined)
-        str = 'DBSCAN Parameters for combined data';
-    end
-	handles.handles.DBSCANSettingsTitleText(1) = uicontrol('Style', 'text', ...
-        'String', str, 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 220 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-    
-    %%%%%%
-    if verLessThan('matlab', '8.4')
-        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.2 195/250 .6 .11],...
-            'SelectionChangeFcn', @changeDBSCANChannel);
-    else
-        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.2 195/250 .6 .11],...
-            'SelectionChangedFcn', @changeDBSCANChannel);
-    end
-    
-    handles.handles.DBSCANChannelSelect(1) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-        'Style', 'radiobutton', 'String', 'Ch 1', 'position', [15 4 50 20]);
-    
-    handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-        'Style', 'radiobutton', 'String', 'Ch 2', 'position', [90 4 50 20]);
-    
-    if verLessThan('matlab', '8.4')     
-        if handles.Nchannels > 1
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');     
-        else  
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
-            set(handles.handles.DBSCANChannelSelect(2), 'Enable', 'off');
-        end
-    else
-        if handles.Nchannels > 1
-            handles.handles.DBSCANChannelToggle.Visible = 'on';
-        else
-            handles.handles.DBSCANChannelToggle.Visible = 'on';
-            handles.handles.DBSCANChannelSelect(2).Enable = 'off';
-        end  
-    end
-    
-    ch = 1;
-    if(isCombined)
-        ch = 3;
-        if verLessThan('matlab', '8.4')
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'off'); 
-        else
-            handles.handles.DBSCANChannelToggle.Visible = 'off';
-        end 
-    end
-    
-    
-    %%%%%%
-    handles.handles.DBSCANSettingsText(1) = uicontrol('Style', 'text', ...
-        'String', 'Epsilon (nm):', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 162 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(2) = uicontrol('Style', 'text', ...
-        'String', 'minPts:', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 137 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(3) = uicontrol('Style', 'text', ...
-        'String', 'Plot Cutoff:', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 112 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(4) = uicontrol('Style', 'text', ...
-        'String', 'Processing Threads:', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 87 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(5) = uicontrol('Style', 'text', ...
-        'String', 'L(r) - r Radius (nm):', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 62 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(6) = uicontrol('Style', 'text', ...
-        'String', 'Use', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [190 62 30 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(7) = uicontrol('Style', 'text', ...
-        'String', 'Smooth Radius (nm):', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 37 110 20], 'horizontalalignment', 'right');
-    
-	handles.handles.DBSCANSettingsText(8) = uicontrol('Style', 'text', ...
-        'String', 'Calc Stats:', 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [0 11 110 20], 'horizontalalignment', 'right');
-    
-	%%%%%%%%%%
-    
-    handles.handles.DBSCANSettingsEdit(1) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).epsilon), 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [115 166 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(2) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).minPts), 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [115 141 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(3) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).Cutoff), 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [115 116 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(4) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).threads), 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [115 92 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(5) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad), 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [115 66 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(6) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).SmoothingRad), 'parent', handles.handles.DBSCANSettingsFig,...
-        'Position', [115 41 60 20]);
-    
-    set(handles.handles.DBSCANSettingsEdit, 'Callback', @DBSCANCheckEditBox);
-    
-    %%%%%%
-    
-    handles.handles.DBSCANSetToggle = uicontrol('Style', 'checkbox', ...
-        'Value', handles.DBSCAN(ch).UseLr_rThresh, 'position', [225 65 20 20], ...
-        'callback', @DBSCANUseThreshold);
-    
-	handles.handles.DBSCANDoStatsToggle = uicontrol('Style', 'checkbox', ...
-        'Value', handles.DBSCAN(ch).DoStats, 'position', [115 15 20 20]);
-    
-    if(withstats) % avoid changing the settings by users
-        set(handles.handles.DBSCANSetToggle, 'Enable', 'off');
-        set(handles.handles.DBSCANDoStatsToggle, 'Enable', 'off');
-    end
-    
-    
-    handles.handles.DBSCANSettingsButton = uicontrol('Style', 'pushbutton', ...
-        'String', 'Continue', 'parent', handles.handles.DBSCANSettingsFig, ...
-        'Position', [165 2 85 30], 'Callback', @DBSCANSetAndContinue);
-
-    set(handles.handles.DBSCANSettingsFig, 'CloseRequestFcn', @DBSCANCloseOutWindow);
-    
-    DBSCANUseThreshold();
-    
-    uiwait;
-    
-    function DBSCANCloseOutWindow(varargin)
-        % Cancel, don't execute further
-        returnValue = 0;
-        uiresume;
-        delete(handles.handles.DBSCANSettingsFig);
-    end
-
-    function DBSCANCheckEditBox(hObj, varargin)
-        
-        input = str2double(get(hObj,'string'));
-        if isnan(input) 
-            errordlg('You must enter a numeric value','Invalid Input','modal');
-%             return;
-        elseif input < 0
-            
-            errordlg('Value must be positive','Invalid Input','modal');
-%             return;
-        else
-            % continue
-        end
-    end
-
-    function changeDBSCANChannel(varargin)
-        
-        changeToValue = (varargin{2}.NewValue);
-
-        if strcmp(changeToValue.String, 'Ch 1');
-            ch = 1;
-            oldCh = 2;
-        elseif strcmp(changeToValue.String, 'Ch 2');
-            ch = 2;
-            oldCh = 1;
-        end
-        
-     	handles.DBSCAN(oldCh).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
-        handles.DBSCAN(oldCh).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(oldCh).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
-        handles.DBSCAN(oldCh).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
-        handles.DBSCAN(oldCh).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
-        handles.DBSCAN(oldCh).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
-        handles.DBSCAN(oldCh).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
-        handles.DBSCAN(oldCh).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
-        
-%         disp(handles.DBSCAN(oldCh));
-        
-        set(handles.handles.DBSCANSettingsEdit(1), 'String', num2str(handles.DBSCAN(ch).epsilon));
-        set(handles.handles.DBSCANSettingsEdit(2), 'String', num2str(handles.DBSCAN(ch).minPts));
-        set(handles.handles.DBSCANSettingsEdit(3), 'String', num2str(handles.DBSCAN(ch).Cutoff));
-        set(handles.handles.DBSCANSettingsEdit(4), 'String', num2str(handles.DBSCAN(ch).threads));
-        set(handles.handles.DBSCANSettingsEdit(5), 'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad));
-        set(handles.handles.DBSCANSettingsEdit(6), 'String', num2str(handles.DBSCAN(ch).SmoothingRad));       
-        set(handles.handles.DBSCANSetToggle, 'Value', handles.DBSCAN(ch).UseLr_rThresh);
-        set(handles.handles.DBSCANDoStatsToggle, 'Value', handles.DBSCAN(ch).DoStats);
-        
-    end
-
-    function DBSCANUseThreshold(varargin)
-        
-        if get(handles.handles.DBSCANSetToggle, 'value') == 1
-            set(handles.handles.DBSCANSettingsEdit(5), 'enable', 'on');
-        elseif get(handles.handles.DBSCANSetToggle, 'value') == 0
-            set(handles.handles.DBSCANSettingsEdit(5), 'enable', 'off');
-        end
-        
-    end
-
-    function DBSCANSetAndContinue(varargin)
-        
-        % Collect inputs and set parameters in guidata
-     	handles.DBSCAN(ch).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
-        handles.DBSCAN(ch).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(ch).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
-        handles.DBSCAN(ch).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
-        handles.DBSCAN(ch).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
-        handles.DBSCAN(ch).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
-        handles.DBSCAN(ch).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
-        handles.DBSCAN(ch).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
-                
-        returnValue = 1;
-        guidata(handles.handles.MainFig, handles);
-        uiresume;
-        delete(handles.handles.DBSCANSettingsFig);
-    end    
-end
-
-
-% Pop-up window to set DoC parameters
-function returnValue = setDoCParameters(handles)
-
-    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
-
-    handles.handles.DoCSettingsFig = figure();
-    set(handles.handles.DoCSettingsFig, 'Tag', 'ClusDoC');
-    resizeFig(handles.handles.DoCSettingsFig, [510 306]);
-    set(handles.handles.DoCSettingsFig, 'toolbar', 'figure', 'menubar', 'none', ...
-        'name', 'DoC Parameters');
-    
-    ch = 1;
-    if(isCombined)
-        ch = 3;
-    end
-    
-    SUP = 40; %shift control up compared to v1.0.0
-    SUP2 = 30;
-   
-    handles.handles.DoCSettingsTitleText(2) = uicontrol('Style', 'text', ...
-        'String', '_____________________', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 197+SUP 200 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-
-	handles.handles.DoCSettingsTitleText(1) = uicontrol('Style', 'text', ...
-        'String', 'Degree of Colocalization Parameters', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 207+SUP 200 35], 'horizontalalignment', 'center', 'Fontsize', 10);
-    
-    %%%%%%
-    
-    handles.handles.DoCSettingsText(1) = uicontrol('Style', 'text', ...
-        'String', 'L(r) - r radius (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 160+SUP2 100 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DoCSettingsText(2) = uicontrol('Style', 'text', ...
-        'String', 'Rmax (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 130+SUP2 100 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DoCSettingsText(3) = uicontrol('Style', 'text', ...
-        'String', 'Step (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 100+SUP2 100 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DoCSettingsText(4) = uicontrol('Style', 'text', ...
-        'String', 'Colocalization Threshold:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 60+SUP2 100 30], 'horizontalalignment', 'right');
-    
-	handles.handles.DoCSettingsText(5) = uicontrol('Style', 'text', ...
-        'String', 'Min Coloc''d Points/Cluster:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [0 20+SUP2 100 30], 'horizontalalignment', 'right');
-    
-	%%%%%%%%%%
-    
-    handles.handles.DoCSettingsEdit(1) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DoC.Lr_rRad), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 162+SUP2 60 20]);
-    
-    handles.handles.DoCSettingsEdit(2) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DoC.Rmax), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 132+SUP2 60 20]);
-    
-    handles.handles.DoCSettingsEdit(3) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DoC.Step), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 102+SUP2 60 20]);
-    
-    handles.handles.DoCSettingsEdit(4) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DoC.ColoThres), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 67+SUP2 60 20]);
-    
-	handles.handles.DoCSettingsEdit(5) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DoC.NbThresh), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [120 32+SUP2 60 20]);
-    
-    
-    %%%%%%%%%%%%%%%
-    % DoC - DBSCAN settings
-    
-    str = 'DBSCAN Parameters';
-    if(isCombined)
-        str = 'DBSCAN Parameters for combined data';
-    end
-	handles.handles.DBSCANSettingsTitleText(1) = uicontrol('Style', 'text', ...
-        'String', str, 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 220+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-    
-    %%%%%%%%
-    if verLessThan('matlab', '8.4');
-        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.55 220/306 .4 .11],...
-            'SelectionChangeFcn', @changeDBSCANChannel);
-    else
-        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.55 220/306 .4 .11],...
-            'SelectionChangedFcn', @changeDBSCANChannel);
-    end
-                  
-    handles.handles.DBSCANChannelSelect(1) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-        'Style', 'radiobutton', 'String', 'Ch 1', 'position', [39 7 50 20]);
-    
-    handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-        'Style', 'radiobutton', 'String', 'Ch 2', 'position', [130 7 50 20]);
-    
-    if verLessThan('matlab', '8.4')
-        
-        if handles.Nchannels > 1
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
-        else
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
-            set(handles.handles.DBSCANChannelSelect(2), 'Enable', 'off');
-        end
-        
-    else
-        if handles.Nchannels > 1
-            handles.handles.DBSCANChannelToggle.Visible = 'on';
-        else
-            handles.handles.DBSCANChannelToggle.Visible = 'on';
-            handles.handles.DBSCANChannelSelect(2).Enable = 'off';
-        end
-    end
-    
-    if(isCombined)
-        if verLessThan('matlab', '8.4')
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'off'); 
-        else
-            handles.handles.DBSCANChannelToggle.Visible = 'off';
-        end 
-        handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
-            'String', '_____________________', 'parent', handles.handles.DoCSettingsFig,...
-            'Position', [260 197+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-    end
-        
-    %%%%%%%%
-    
-    
-    %%%%%%
-    
-    handles.handles.DBSCANSettingsText(1) = uicontrol('Style', 'text', ...
-        'String', 'Epsilon (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 157+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(2) = uicontrol('Style', 'text', ...
-        'String', 'minPts:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 132+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(3) = uicontrol('Style', 'text', ...
-        'String', 'Plot Cutoff:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 107+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(4) = uicontrol('Style', 'text', ...
-        'String', 'Processing Threads:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 82+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(5) = uicontrol('Style', 'text', ...
-        'String', 'L(r) - r Radius (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 57+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(6) = uicontrol('Style', 'text', ...
-        'String', 'Use', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [450 57+SUP2 30 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(7) = uicontrol('Style', 'text', ...
-        'String', 'Smooth Radius (nm):', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 32+SUP2 110 20], 'horizontalalignment', 'right');
-    
-	handles.handles.DBSCANSettingsText(8) = uicontrol('Style', 'text', ...
-        'String', 'Calc Stats:', 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [260 6+SUP2 110 20], 'horizontalalignment', 'right');
-    
-	%%%%%%%%%%
-    
-    handles.handles.DBSCANSettingsEdit(1) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).epsilon), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 161+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(2) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).minPts), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 136+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(3) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).Cutoff), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 111+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(4) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).threads), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 86+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(5) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 61+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(6) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).SmoothingRad), 'parent', handles.handles.DoCSettingsFig,...
-        'Position', [375 36+SUP2 60 20]);
-    
-    set(handles.handles.DBSCANSettingsEdit, 'Callback', @DoCCheckEditBox);
-    
-    %%%%%%
-    
-    handles.handles.DBSCANSetToggle = uicontrol('Style', 'checkbox', ...
-        'Value', handles.DBSCAN(ch).UseLr_rThresh, 'position', [485 60+SUP2 20 20], ...
-        'callback', @DBSCANUseThreshold);
-    
-	handles.handles.DBSCANDoStatsToggle = uicontrol('Style', 'checkbox', ...
-        'Value', handles.DBSCAN(ch).DoStats, 'position', [375 10+SUP2 20 20]);
-
-    set(handles.handles.DBSCANSetToggle, 'Enable', 'off');
-    set(handles.handles.DBSCANDoStatsToggle, 'Enable', 'off');
-
-    %%%%%%
-    
-    
-    handles.handles.DoCSettingsButton = uicontrol('Style', 'pushbutton', ...
-        'String', 'Continue', 'parent', handles.handles.DoCSettingsFig, ...
-        'Position', [425 4 85 30], 'Callback', @DoCSetAndContinue);
-
-    set(handles.handles.DoCSettingsFig, 'CloseRequestFcn', @DoCCloseOutWindow);
-    
-    DoCUseThreshold();
-    
-    uiwait;
-    
-    function DoCCloseOutWindow(varargin)
-        % Cancel, don't execute further
-        returnValue = 0;
-        uiresume;
-        delete(handles.handles.DoCSettingsFig);
-    end
-
-    function DoCCheckEditBox(hObj, varargin)
-        
-        input = str2double(get(hObj,'string'));
-        if isnan(input) 
-            
-            errordlg('You must enter a numeric value','Invalid Input','modal');
-%             return;
-        elseif input < 0
-            
-            errordlg('Value must be positive','Invalid Input','modal');
-%             return;
-        else
-            % continue
-        end
-
-    end
-
-    function changeDBSCANChannel(varargin)
-        
-        changeToValue = (varargin{2}.NewValue);
-        
-        if strcmp(changeToValue.String, 'Ch 1');
-            ch = 1;
-            oldCh = 2;
-        elseif strcmp(changeToValue.String, 'Ch 2');
-            ch = 2;
-            oldCh = 1;
-        end
-        
-     	handles.DBSCAN(oldCh).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
-        handles.DBSCAN(oldCh).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(oldCh).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
-        handles.DBSCAN(oldCh).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
-        handles.DBSCAN(oldCh).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
-        handles.DBSCAN(oldCh).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
-        handles.DBSCAN(oldCh).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
-        handles.DBSCAN(oldCh).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
-        
-%         disp(handles.DBSCAN(oldCh));
-        
-        set(handles.handles.DBSCANSettingsEdit(1), 'String', num2str(handles.DBSCAN(ch).epsilon));
-        set(handles.handles.DBSCANSettingsEdit(2), 'String', num2str(handles.DBSCAN(ch).minPts));
-        set(handles.handles.DBSCANSettingsEdit(3), 'String', num2str(handles.DBSCAN(ch).Cutoff));
-        set(handles.handles.DBSCANSettingsEdit(4), 'String', num2str(handles.DBSCAN(ch).threads));
-        set(handles.handles.DBSCANSettingsEdit(5), 'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad));
-        set(handles.handles.DBSCANSettingsEdit(6), 'String', num2str(handles.DBSCAN(ch).SmoothingRad));       
-        set(handles.handles.DBSCANSetToggle, 'Value', handles.DBSCAN(ch).UseLr_rThresh);
-        set(handles.handles.DBSCANDoStatsToggle, 'Value', handles.DBSCAN(ch).DoStats);
-        
-    end
-
-
-    function DoCUseThreshold(varargin)
-        
-        if get(handles.handles.DBSCANSetToggle, 'value') == 1
-            set(handles.handles.DBSCANSettingsEdit(5), 'enable', 'on');
-        elseif get(handles.handles.DBSCANSetToggle, 'value') == 0
-            set(handles.handles.DBSCANSettingsEdit(5), 'enable', 'off');
-        end
-        
-    end
-
-    function DoCSetAndContinue(varargin)
-        
-        % Collect inputs and set parameters in guidata
-     	handles.DoC.Lr_rRad = str2double(get(handles.handles.DoCSettingsEdit(1),'string'));
-        handles.DoC.Rmax = str2double(get(handles.handles.DoCSettingsEdit(2),'string'));
-        handles.DoC.Step = str2double(get(handles.handles.DoCSettingsEdit(3),'string'));
-        handles.DoC.ColoThres = str2double(get(handles.handles.DoCSettingsEdit(4), 'string'));
-        handles.DoC.NbThresh = str2double(get(handles.handles.DoCSettingsEdit(5), 'string'));
-             
-        % Collect inputs and set parameters in guidata
-     	handles.DBSCAN(ch).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
-        handles.DBSCAN(ch).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(ch).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
-        handles.DBSCAN(ch).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
-        handles.DBSCAN(ch).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
-        handles.DBSCAN(ch).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
-        handles.DBSCAN(ch).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
-        handles.DBSCAN(ch).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
-        
-        returnValue = 1;
-        guidata(handles.handles.MainFig, handles);
-        uiresume;
-        delete(handles.handles.DoCSettingsFig);
-        
-    end  
-
-end
-
-
-% Pop-up window to set PoC parameters
-function returnValue = setPoCParameters(handles)
-
-    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
-
-    handles.handles.PoCSettingsFig = figure();
-    set(handles.handles.PoCSettingsFig, 'Tag', 'ClusPoC');
-    resizeFig(handles.handles.PoCSettingsFig, [510 306]);
-    set(handles.handles.PoCSettingsFig, 'toolbar', 'figure', 'menubar', 'none', ...
-        'name', 'PoC Parameters');
-    
-    ch = 1;
-    if(isCombined)
-        ch = 3;
-    end
-    
-    SUP = 40; %shift control up compared to v1.0.0
-    SUP2 = 30;
-   
-    handles.handles.PoCSettingsTitleText(2) = uicontrol('Style', 'text', ...
-        'String', '_____________________', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [0 197+SUP 200 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-
-	handles.handles.PoCSettingsTitleText(1) = uicontrol('Style', 'text', ...
-        'String', 'Probability of Colocalization Parameters', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [0 207+SUP 200 35], 'horizontalalignment', 'center', 'Fontsize', 10);
-    
-    %%%%%%
-    
-    handles.handles.PoCSettingsText(1) = uicontrol('Style', 'text', ...
-        'String', 'PoC_a=:', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [0 160+SUP2 100 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DoCSettingsText(2) = uicontrol('Style', 'text', ...
-        'String', 'L(r) - r radius (nm):', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [0 130+SUP2 100 20], 'horizontalalignment', 'right');
-    
-    handles.handles.PoCSettingsText(3) = uicontrol('Style', 'text', ...
-        'String', 'Gaussian width (sigma):', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [0 100+SUP2 100 30], 'horizontalalignment', 'right');
-    
-    handles.handles.PoCSettingsText(4) = uicontrol('Style', 'text', ...
-        'String', 'Colocalization Threshold:', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [0 60+SUP2 100 30], 'horizontalalignment', 'right');
-    
-    handles.handles.PoCSettingsText(5) = uicontrol('Style', 'text', ...
-        'String', 'Min Coloc''d Points/Cluster:', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [0 20+SUP2 100 30], 'horizontalalignment', 'right');
-    
-	%%%%%%%%%%
-    
-    handles.handles.PoCSettingsEdit(1) = uicontrol(handles.handles.b_panel, 'Style', 'popup', 'String', ...
-        {'sum_b/sum_a', 'sum_b/(sum_a+sum_b)'}, 'parent', handles.handles.PoCSettingsFig, ...
-        'Position', [118 162+SUP2 120 20]);
-    
-    handles.handles.PoCSettingsEdit(2) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.PoC.Lr_rRad), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [120 132+SUP2 60 20]);
-    
-    handles.handles.PoCSettingsEdit(3) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.PoC.Sigma), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [120 102+SUP2 60 20]);
-    
-    handles.handles.PoCSettingsEdit(4) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.PoC.ColoThres), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [120 67+SUP2 60 20]);
-    
-    handles.handles.PoCSettingsEdit(5) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.PoC.NbThresh), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [120 32+SUP2 60 20]);
-    
-    
-    %%%%%%%%%%%%%%%
-    % PoC - DBSCAN settings
-    
-    str = 'DBSCAN Parameters';
-    if(isCombined)
-        str = 'DBSCAN Parameters for combined data';
-    end
-	handles.handles.DBSCANSettingsTitleText(1) = uicontrol('Style', 'text', ...
-        'String', str, 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [260 220+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-    
-    %%%%%%%%
-    if verLessThan('matlab', '8.4')
-        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.55 220/306 .4 .11],...
-            'SelectionChangeFcn', @changeDBSCANChannel);
-    else
-        handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.55 220/306 .4 .11],...
-            'SelectionChangedFcn', @changeDBSCANChannel);
-    end
-                  
-    handles.handles.DBSCANChannelSelect(1) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-        'Style', 'radiobutton', 'String', 'Ch 1', 'position', [39 7 50 20]);
-    
-    handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-        'Style', 'radiobutton', 'String', 'Ch 2', 'position', [130 7 50 20]);
-    
-    if verLessThan('matlab', '8.4')
-        
-        if handles.Nchannels > 1
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
-        else
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
-            set(handles.handles.DBSCANChannelSelect(2), 'Enable', 'off');
-        end
-        
-    else
-        if handles.Nchannels > 1
-            handles.handles.DBSCANChannelToggle.Visible = 'on';
-        else
-            handles.handles.DBSCANChannelToggle.Visible = 'on';
-            handles.handles.DBSCANChannelSelect(2).Enable = 'off';
-        end
-    end
-    
-    if(isCombined)
-        if verLessThan('matlab', '8.4')
-            set(handles.handles.DBSCANChannelToggle, 'Visible', 'off'); 
-        else
-            handles.handles.DBSCANChannelToggle.Visible = 'off';
-        end 
-        handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
-            'String', '_____________________', 'parent', handles.handles.PoCSettingsFig,...
-            'Position', [260 197+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
-    end
-        
-    %%%%%%%%
-    
-    
-    %%%%%%
-    
-    handles.handles.DBSCANSettingsText(1) = uicontrol('Style', 'text', ...
-        'String', 'Epsilon (nm):', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [260 157+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(2) = uicontrol('Style', 'text', ...
-        'String', 'minPts:', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [260 132+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(3) = uicontrol('Style', 'text', ...
-        'String', 'Plot Cutoff:', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [260 107+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(4) = uicontrol('Style', 'text', ...
-        'String', 'Processing Threads:', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [260 82+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(5) = uicontrol('Style', 'text', ...
-        'String', 'L(r) - r Radius (nm):', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [260 57+SUP2 110 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(6) = uicontrol('Style', 'text', ...
-        'String', 'Use', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [450 57+SUP2 30 20], 'horizontalalignment', 'right');
-    
-    handles.handles.DBSCANSettingsText(7) = uicontrol('Style', 'text', ...
-        'String', 'Smooth Radius (nm):', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [260 32+SUP2 110 20], 'horizontalalignment', 'right');
-    
-	handles.handles.DBSCANSettingsText(8) = uicontrol('Style', 'text', ...
-        'String', 'Calc Stats:', 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [260 6+SUP2 110 20], 'horizontalalignment', 'right');
-    
-	%%%%%%%%%%
-    
-    handles.handles.DBSCANSettingsEdit(1) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).epsilon), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [375 161+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(2) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).minPts), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [375 136+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(3) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).Cutoff), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [375 111+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(4) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).threads), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [375 86+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(5) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [375 61+SUP2 60 20]);
-    
-    handles.handles.DBSCANSettingsEdit(6) = uicontrol('Style', 'edit', ...
-        'String', num2str(handles.DBSCAN(ch).SmoothingRad), 'parent', handles.handles.PoCSettingsFig,...
-        'Position', [375 36+SUP2 60 20]);
-    
-    set(handles.handles.DBSCANSettingsEdit, 'Callback', @PoCCheckEditBox);
-    
-    %%%%%%
-    
-    handles.handles.DBSCANSetToggle = uicontrol('Style', 'checkbox', ...
-        'Value', handles.DBSCAN(ch).UseLr_rThresh, 'position', [485 60+SUP2 20 20], ...
-        'callback', @DBSCANUseThreshold);
-    
-	handles.handles.DBSCANDoStatsToggle = uicontrol('Style', 'checkbox', ...
-        'Value', handles.DBSCAN(ch).DoStats, 'position', [375 10+SUP2 20 20]);
-
-    set(handles.handles.DBSCANSetToggle, 'Enable', 'off');
-    set(handles.handles.DBSCANDoStatsToggle, 'Enable', 'off');
-
-    %%%%%%
-    
-    
-    handles.handles.PoCSettingsButton = uicontrol('Style', 'pushbutton', ...
-        'String', 'Continue', 'parent', handles.handles.PoCSettingsFig, ...
-        'Position', [425 4 85 30], 'Callback', @PoCSetAndContinue);
-
-    set(handles.handles.PoCSettingsFig, 'CloseRequestFcn', @PoCCloseOutWindow);
-    
-    PoCUseThreshold();
-    
-    uiwait;
-    
-    function PoCCloseOutWindow(varargin)
-        % Cancel, don't execute further
-        returnValue = 0;
-        uiresume;
-        delete(handles.handles.PoCSettingsFig);
-    end
-
-    function PoCCheckEditBox(hObj, varargin)
-        
-        input = str2double(get(hObj,'string'));
-        if isnan(input) 
-            
-            errordlg('You must enter a numeric value','Invalid Input','modal');
-%             return;
-        elseif input < 0
-            
-            errordlg('Value must be positive','Invalid Input','modal');
-%             return;
-        else
-            % continue
-        end
-
-    end
-
-    function changeDBSCANChannel(varargin)
-        
-        changeToValue = (varargin{2}.NewValue);
-        
-        if strcmp(changeToValue.String, 'Ch 1');
-            ch = 1;
-            oldCh = 2;
-        elseif strcmp(changeToValue.String, 'Ch 2');
-            ch = 2;
-            oldCh = 1;
-        end
-        
-     	handles.DBSCAN(oldCh).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
-        handles.DBSCAN(oldCh).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(oldCh).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
-        handles.DBSCAN(oldCh).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
-        handles.DBSCAN(oldCh).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
-        handles.DBSCAN(oldCh).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
-        handles.DBSCAN(oldCh).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
-        handles.DBSCAN(oldCh).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
-        
-%         disp(handles.DBSCAN(oldCh));
-        
-        set(handles.handles.DBSCANSettingsEdit(1), 'String', num2str(handles.DBSCAN(ch).epsilon));
-        set(handles.handles.DBSCANSettingsEdit(2), 'String', num2str(handles.DBSCAN(ch).minPts));
-        set(handles.handles.DBSCANSettingsEdit(3), 'String', num2str(handles.DBSCAN(ch).Cutoff));
-        set(handles.handles.DBSCANSettingsEdit(4), 'String', num2str(handles.DBSCAN(ch).threads));
-        set(handles.handles.DBSCANSettingsEdit(5), 'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad));
-        set(handles.handles.DBSCANSettingsEdit(6), 'String', num2str(handles.DBSCAN(ch).SmoothingRad));       
-        set(handles.handles.DBSCANSetToggle, 'Value', handles.DBSCAN(ch).UseLr_rThresh);
-        set(handles.handles.DBSCANDoStatsToggle, 'Value', handles.DBSCAN(ch).DoStats);
-        
-    end
-
-
-    function PoCUseThreshold(varargin)
-        
-        if get(handles.handles.DBSCANSetToggle, 'value') == 1
-            set(handles.handles.DBSCANSettingsEdit(5), 'enable', 'on');
-        elseif get(handles.handles.DBSCANSetToggle, 'value') == 0
-            set(handles.handles.DBSCANSettingsEdit(5), 'enable', 'off');
-        end
-        
-    end
-
-    function PoCSetAndContinue(varargin)
-        
-        % Collect inputs and set parameters in guidata
-     	handles.PoC.FuncType = get(handles.handles.PoCSettingsEdit(1),'value');
-        handles.PoC.Lr_rRad = str2double(get(handles.handles.PoCSettingsEdit(2),'string'));
-        handles.PoC.Sigma = str2double(get(handles.handles.PoCSettingsEdit(3),'string'));
-        handles.PoC.ColoThres = str2double(get(handles.handles.PoCSettingsEdit(4), 'string'));
-        handles.PoC.NbThresh = str2double(get(handles.handles.PoCSettingsEdit(5), 'string'));
-             
-        % Collect inputs and set parameters in guidata
-     	handles.DBSCAN(ch).epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
-        handles.DBSCAN(ch).minPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-        handles.DBSCAN(ch).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
-        handles.DBSCAN(ch).threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
-        handles.DBSCAN(ch).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
-        handles.DBSCAN(ch).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
-        handles.DBSCAN(ch).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
-        handles.DBSCAN(ch).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
-        
-        returnValue = 1;
-        guidata(handles.handles.MainFig, handles);
-        uiresume;
-        delete(handles.handles.PoCSettingsFig);
-        
-    end  
-
-end
-
-
 % Function Ripley K Test for active ROI
 function RipleyKtest(~, ~, ~)
 
@@ -2364,7 +1520,7 @@ function RipleyKtest(~, ~, ~)
     % RipleyK parameter
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Launch GUI window to change the set parameters, if desired
-    returnVal = setRipleyKParameters(handles);
+    [handles, returnVal] = InputDialogs(handles, 'ripley');
 
     if returnVal == 0
         set(handles.handles.MainFig, 'pointer', 'arrow');
@@ -2504,9 +1660,12 @@ function DBSCAN_Test(~, ~, ~)
     for ch = 1:3
         handles.DBSCAN(ch).UseLr_rThresh = false;
         handles.DBSCAN(ch).DoStats = false;
+        handles.DBSCAN(ch).settings = handles.settings;
     end
-    returnVal = setDBSCANParameters(handles, false);
-    handles = guidata(findobj('Tag', 'PALM GUI'));
+    
+    %returnVal = setDBSCANParameters(handles, false);
+    %handles = guidata(findobj('Tag', 'PALM GUI'));
+    [handles, returnVal] = InputDialogs(handles, 'dbscan', false);
     
     if returnVal == 0
         set(handles.handles.MainFig, 'pointer', 'arrow');
@@ -2622,8 +1781,7 @@ function RunRipleyK(~, ~, ~)
     UpdateStatusBar(handles, 'Running RippleK on ROI...');
     drawnow;
 
-    returnVal = setRipleyKParameters(handles); % re-set RipleyK parameters if desired
-    handles = guidata(findobj('Tag', 'PALM GUI'));
+    [handles, returnVal] = InputDialogs(handles, 'ripley'); % re-set RipleyK parameters if desired
     
     if returnVal == 0
         
@@ -2706,10 +1864,12 @@ function RunDBSCAN(~, ~, ~)
     for ch = 1:3
         handles.DBSCAN(ch).UseLr_rThresh = true;
         handles.DBSCAN(ch).DoStats = true;
+        handles.DBSCAN(ch).settings = handles.settings;
     end
     
-    returnVal = setDBSCANParameters(handles, true);
-    handles = guidata(findobj('Tag', 'PALM GUI'));
+    %returnVal = setDBSCANParameters(handles, true);
+    %handles = guidata(findobj('Tag', 'PALM GUI'));
+    [handles, returnVal] = InputDialogs(handles, 'dbscan', true);
 
     if returnVal == 0
         % Cancel.  Reset GUI
@@ -2909,7 +2069,7 @@ function RunDoC(~, ~, ~)
     CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DoC Statistics and Plots'));
     
     % Input parameters for calculating DoC scores for all points
-	returnVal = setDoCParameters(handles);
+	[handles, returnVal] = InputDialogs(handles, 'doc');
         
     if returnVal == 0
         
@@ -2925,13 +2085,13 @@ function RunDoC(~, ~, ~)
         
         try
             
-            handles = guidata(handles.handles.MainFig);
             % Should be only place that DBSCANparams are passed both
             % channels together
             dbscanParams = handles.DBSCAN;
             for i = 1:3
                 dbscanParams(i).Outputfolder = handles.Outputfolder;
                 dbscanParams(i).ScoreThreshold = handles.DoC.ColoThres;
+                dbscanParams(i).settings = handles.settings;
             end
             
             % cd to DoC_Result
@@ -2956,7 +2116,7 @@ function RunDoC(~, ~, ~)
             
             UpdateStatusBar(handles, 'Processing DoC results...');
             ResultTable = ProcessDoCResults(handles.CellData, handles.NDataColumns, handles.ROICoordinates, ...
-                DensityROI, fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.DoC.ColoThres);
+                DensityROI, fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.DoC.ColoThres, handles.settings.ShowScalebar);
             
             
             % Run DBSCAN on data used for DoC analysis
@@ -3053,7 +2213,7 @@ function RunPoC(~, ~, ~)
     CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'PoC Statistics and Plots'));
     
     % Input parameters for calculating DoC scores for all points
-	returnVal = setPoCParameters(handles);
+	[handles, returnVal] = InputDialogs(handles, 'poc');
         
     if returnVal == 0
         
@@ -3069,13 +2229,13 @@ function RunPoC(~, ~, ~)
         
         try
             
-            handles = guidata(handles.handles.MainFig);
             % Should be only place that DBSCANparams are passed both
             % channels together
             dbscanParams = handles.DBSCAN;
             for i = 1:3
                 dbscanParams(i).Outputfolder = handles.Outputfolder;
                 dbscanParams(i).ScoreThreshold = handles.PoC.ColoThres;
+                dbscanParams(i).settings = handles.settings;
             end
             
             % cd to DoC_Result
@@ -3096,7 +2256,7 @@ function RunPoC(~, ~, ~)
             % Plotting, segmentation, and statistics start here
             UpdateStatusBar(handles, 'Processing PoC results...');
             ResultTable = ProcessPoCResults(handles.CellData, handles.NDataColumns, handles.ROICoordinates, ...
-                DensityROI, fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.PoC.ColoThres);
+                DensityROI, fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.PoC.ColoThres, handles.settings.ShowScalebar);
             
             % Run DBSCAN on data used for DoC analysis
             UpdateStatusBar(handles, 'DBSCAN on PoC results...');
@@ -3264,13 +2424,13 @@ function ExportToTextPush(varargin)
                 fprintf(fID, '# MaskFile: %s\r\n', 'NoMask');
             end
 
-            fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN.epsilon);
-            fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN.minPts);
+            fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN.Epsilon);
+            fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN.MinPts);
             fprintf(fID, '# DBSCANUseLr_Thresh: %d\r\n', handles.DBSCAN.UseLr_rThresh);
             fprintf(fID, '# DBSCANLr_rThreshRad: %.2f\r\n', handles.DBSCAN.Lr_rThreshRad);
             fprintf(fID, '# DBSCANSmoothingRad: %.2f\r\n', handles.DBSCAN.SmoothingRad);
             fprintf(fID, '# DBSCANCutoff: %.2f\r\n', handles.DBSCAN.Cutoff);
-            fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN.threads);
+            fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN.Threads);
             fprintf(fID, '# DoCLr_rRad: %.2f\r\n', handles.DoC.Lr_rRad);
             fprintf(fID, '# DoCRmax: %d\r\n', handles.DoC.Rmax);
             fprintf(fID, '# DoCStep: %d\r\n', handles.DoC.Step);
@@ -3314,13 +2474,13 @@ function ExportToTextPush(varargin)
             fprintf(fID, '# MaskFile: %s\r\n', 'NoMask');
         end
 
-        fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN.epsilon);
-        fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN.minPts);
+        fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN.Epsilon);
+        fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN.MinPts);
         fprintf(fID, '# DBSCANUseLr_Thresh: %d\r\n', handles.DBSCAN.UseLr_rThresh);
         fprintf(fID, '# DBSCANLr_rThreshRad: %.2f\r\n', handles.DBSCAN.Lr_rThreshRad);
         fprintf(fID, '# DBSCANSmoothingRad: %.2f\r\n', handles.DBSCAN.SmoothingRad);
         fprintf(fID, '# DBSCANCutoff: %.2f\r\n', handles.DBSCAN.Cutoff);
-        fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN.threads);
+        fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN.Threads);
         fprintf(fID, '# DoCLr_rRad: %.2f\r\n', handles.DoC.Lr_rRad);
         fprintf(fID, '# DoCRmax: %d\r\n', handles.DoC.Rmax);
         fprintf(fID, '# DoCStep: %d\r\n', handles.DoC.Step);
@@ -3459,4 +2619,15 @@ function CloseGUIFunction(varargin)
     
 end
 
-
+function onSetingsClick(varargin)
+    handles = guidata(findobj('Tag', 'PALM GUI'));
+    
+    [handles, returnVal] = InputDialogs(handles, 'settings');
+    if returnVal == 0
+        return;
+    end
+    guidata(findobj('Tag', 'PALM GUI'), handles);
+    if returnVal == 2
+        SaveSettings(handles);
+    end
+end

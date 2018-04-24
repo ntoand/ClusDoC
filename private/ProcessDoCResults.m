@@ -1,4 +1,4 @@
-function ResultTable = ProcessDoCResults(CellData, NDatacolumns, ROICoordinates, DensityROI, Path_name, ColoThres)
+function ResultTable = ProcessDoCResults(CellData, NDatacolumns, ROICoordinates, DensityROI, Path_name, ColoThres, ShowScalebar)
 
 %cd('Degree_Of_Colocalisation')
 %         if exist('Statistic and Plots for Colocalization','dir')
@@ -48,6 +48,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                 whichPointsInROI = whichPointsInROI(:, reg) == '1';
                 
                 DataRaw = CellData{cell}(whichPointsInROI, :); % Data in this ROI in this Cell 
+                if(ShowScalebar)
+                    MaxSize = max(DataRaw(:, 5));
+                end
 
                 Data_DoC1 = DataRaw(DataRaw(:, NDatacolumns + 7) == 1, :); % Data in this ROI in this Cell with Lr_r value above threshold
 %%      
@@ -88,6 +91,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                 set(gca, 'box','on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
                 set(gcf,'Color',[1 1 1])
                 
+                if(ShowScalebar)
+                    scalebar(ax, MaxSize);
+                end
                 saveas(gcf, fullfile(Path_name, f1, 'Raw data maps', strcat(GenericName ,'Raw_data')), 'tif');
                 close gcf
                 
@@ -106,6 +112,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                     Xlimit=get(ax,'xlim');Ylimit=get(ax,'ylim');
                     set(gca, 'box','on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
                     set(gcf,'Color',[1 1 1])
+                    if(ShowScalebar)
+                        scalebar(ax, MaxSize);
+                    end
                     saveas(gcf, fullfile(Path_name, f1, 'Raw data maps with outliers removed', strcat(GenericName ,'Outliers')), 'tif');
                     close gcf
                 end
@@ -221,6 +230,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                     caxis([0,1])
                     set(gca, 'box','on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
                     set(gcf,'Color',[1 1 1])
+                    if(ShowScalebar)
+                        scalebar(gca, MaxSize);
+                    end
                     tt = getframe(gcf);
                     imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.tif', GenericName, 1)));
                     %saveas(gcf,strcat('Plot6\',GenericName ,'Plot6',strcat('_Ch',num2str(i))), 'tif');
@@ -236,6 +248,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                     caxis([0,1])
                     set(gca, 'box','on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
                     set(gcf,'Color',[1 1 1])
+                    if(ShowScalebar)
+                        scalebar(gca, MaxSize);
+                    end
                     tt = getframe(gcf);
                     imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.tif', GenericName, 2)));
                     %saveas(gcf,strcat('Plot6\',GenericName ,'Plot6',strcat('_Ch',num2str(i))), 'tif');
@@ -251,6 +266,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                     caxis([-1,1])
                     set(gca, 'box','on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
                     set(gcf,'Color',[1 1 1])
+                    if(ShowScalebar)
+                        scalebar(gca, MaxSize);
+                    end
                     tt = getframe(gcf);
                     imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.tif', GenericName, 1)));
                     %saveas(gcf,strcat('Plot6\',GenericName ,'Plot6',strcat('_Ch',num2str(i))), 'tif');
@@ -266,6 +284,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                     caxis([-1,1])
                     set(gca, 'box','on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
                     set(gcf,'Color',[1 1 1])
+                    if(ShowScalebar)
+                        scalebar(gca, MaxSize);
+                    end
                     tt = getframe(gcf);
                     imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.tif', GenericName, 2)));
                     %saveas(gcf,strcat('Plot6\',GenericName ,'Plot6',strcat('_Ch',num2str(i))), 'tif');

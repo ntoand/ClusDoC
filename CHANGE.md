@@ -1,12 +1,15 @@
 # Change log
 
-**for v1.0.1**
+**for v1.1.0**
 
 - Fix bug in loadMaskFiles when there is no mask tif file
 - Rearrange GUI controls
 - Fix bugs in DBSCAN when running with Lr_r=off and Stat=on
 - Add new process data mode: combined data 
-
+- Add scalebar to plot
+- Add alphaShape for contour extraction for DBSCAN
+- Move inputParameters dialogs to a separate file
+- Add click to select ROI with pre-defined ROI size
 
 **v1.0.0**
 
