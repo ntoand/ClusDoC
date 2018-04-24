@@ -850,9 +850,6 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             ch = 3;
         end
 
-        SUP = 40; %shift control up compared to v1.0.0
-        SUP2 = 30;
-
         ypos = HEIGHT - 40;
         handles.handles.PoCSettingsTitleText(1) = uicontrol('Style', 'text', ...
             'String', 'Probability of Colocalization Parameters', 'parent', handles.handles.PoCSettingsFig,...
@@ -870,7 +867,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 100 20], 'horizontalalignment', 'right');
         
         handles.handles.PoCSettingsEdit(1) = uicontrol(handles.handles.PoCSettingsFig, 'Style', 'popup', 'String', ...
-            {'sum_b/sum_a', 'sum_b/(sum_a+sum_b)'}, 'parent', handles.handles.PoCSettingsFig, ...
+            {'sum_b/(sum_a+sum_b)', 'sum_b/sum_a'}, 'parent', handles.handles.PoCSettingsFig, ...
             'Position', [118 ypos 120 20]);
 
         ypos = ypos - HSPACE1;
@@ -967,9 +964,9 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             else
                 handles.handles.DBSCANChannelToggle.Visible = 'off';
             end 
-            handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
-                'String', '_____________________', 'parent', handles.handles.PoCSettingsFig,...
-                'Position', [260 197+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+            %handles.handles.DBSCANSettingsTitleText(2) = uicontrol('Style', 'text', ...
+            %    'String', '_____________________', 'parent', handles.handles.PoCSettingsFig,...
+            %    'Position', [260 197+SUP 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
         end
 
         %%%%%%%%

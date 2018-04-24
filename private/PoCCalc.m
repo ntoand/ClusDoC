@@ -43,12 +43,12 @@ function [dataOut, SizeROI] = PoCCalc(Data, FuncType, Lr_rad, Sigma, roiHere)
     c1_mask = Data(:, 12) == 1;
     c2_mask = Data(:, 12) == 2;
     if(FuncType == 1)
-        PoC(c1_mask) = sum2(c1_mask) ./ sum1(c1_mask);
-        PoC(c2_mask) = sum1(c2_mask) ./ sum2(c2_mask);
-    else
         sum = sum1 + sum2;
         PoC(c1_mask) = sum2(c1_mask) ./ sum(c1_mask);
         PoC(c2_mask) = sum1(c2_mask) ./ sum(c2_mask);
+    else
+        PoC(c1_mask) = sum2(c1_mask) ./ sum1(c1_mask);
+        PoC(c2_mask) = sum1(c2_mask) ./ sum2(c2_mask);
     end
 
     dataOut(:, 6) = PoC;

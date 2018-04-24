@@ -1,7 +1,7 @@
 function ClusDoC(varargin)
     close all; % for easier debugging
     clear;
-    DEBUG = true;
+    DEBUG = false;
     if(DEBUG)
         addpath('dev'); % "ln -s private dev" to debug line by line in private funcs
     end
@@ -415,8 +415,8 @@ function initializeParameters(varargin)
     handles.CONST.DEFAULT_ROI_SIZE = 4000;
     handles.CONST.PROCESS_SEPARATE = 1;
     handles.CONST.PROCESS_COMBINED = 2;
-    handles.CONST.POC_TYPE1 = 1;    % poc = sumA / sumB
-    handles.CONST.POC_TYPE2 = 2;    % poc = sumA / (sumA + sumB)
+    handles.CONST.POC_TYPE1 = 1;    % poc = sumA / (sumA + sumB)
+    handles.CONST.POC_TYPE2 = 2;    % poc = sumA / sumB
     
     % Initialize structure to pass values between GUI components
     handles.CellData = {};
