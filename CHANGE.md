@@ -1,5 +1,10 @@
 # Change log
 
+**for v1.2.0**
+
+- Add converter to convert Picasso hdf5 file to Zen format
+- Support load and process Zen format converted from Picasso
+
 **for v1.1.0**
 
 - Fix bug in loadMaskFiles when there is no mask tif file

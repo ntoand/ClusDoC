@@ -26,7 +26,7 @@ function [rvalue, Lr_r] = RipleyKFun( x,A,Start,End,Step,size_ROI)
 
     %for r=Start:Step:End
     parfor i=1:i_range
-
+    
         %i=i+1;
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
