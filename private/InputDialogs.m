@@ -1217,7 +1217,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         
         resizeFig(handles.handles.SettingsFig, [WIDTH HEIGHT]);
         set(handles.handles.SettingsFig, 'toolbar', 'none', 'menubar', 'none', ...
-            'name', 'Ripley K Parameters');
+            'name', 'General settings');
         
         ypos = HEIGHT - 40;
         handles.handles.SettingsTitleText(1) = uicontrol('Style', 'text', ...
@@ -1246,11 +1246,20 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         
         ypos = ypos - SPACE;
         handles.handles.SettingsTitleText(4) = uicontrol('Style', 'text', ...
+            'String', 'Also save plots as .fig', 'parent', handles.handles.SettingsFig,...
+            'Position', [0 ypos 180 20], 'horizontalalignment', 'right', 'Fontsize', 10);
+        
+        handles.handles.SettingsSaveFigToggle = uicontrol('Style', 'checkbox', ...
+            'Value', handles.settings.AlsoSaveFig, 'position', [190 ypos 20 20]);
+        
+        ypos = ypos - SPACE;
+        handles.handles.SettingsTitleText(5) = uicontrol('Style', 'text', ...
             'String', 'Save as default (update cfg file)', 'parent', handles.handles.SettingsFig,...
             'Position', [0 ypos 180 20], 'horizontalalignment', 'right', 'Fontsize', 10);
         
         handles.handles.SettingsSaveDefaultToggle = uicontrol('Style', 'checkbox', ...
             'Value', savedefault, 'position', [190 ypos 20 20]);
+        
         
         handles.handles.SettingsButton = uicontrol('Style', 'pushbutton', ...
             'String', 'Continue', 'parent', handles.handles.SettingsFig, ...
@@ -1271,12 +1280,14 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             handles.settings.RoiSize = str2double(get(handles.handles.SettingsEdit(1), 'String'));
             handles.settings.ShowScalebar = get(handles.handles.SettingsScalebarToggle, 'Value');
             handles.settings.DrawPointOnAlphaShape = get(handles.handles.SettingsDrawPointsToggle, 'Value');
+            handles.settings.AlsoSaveFig = get(handles.handles.SettingsSaveFigToggle, 'Value');
             savedefault = get(handles.handles.SettingsSaveDefaultToggle, 'Value');
             if(savedefault ~= 0)
                 returnVal = 2;
             else
                 returnVal = 1;
             end
+            
             uiresume;
             delete(handles.handles.SettingsFig);
         end

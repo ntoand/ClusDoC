@@ -1,5 +1,38 @@
 # Change log
 
+**for v1.3.0**
+
+- Option to save plots as .fig
+
+| Plots                                | Done |
+| -------------------------------------|:----:|
+| **RimpleyK**                         |      |
+| Ripley_XRegion_Y                     | Y    |
+| RipleyK_Average                      | Y    |
+| **DBSCAN**                           |      |
+| CellX_RegionYRegion_with_Cluster     | Y    |
+| CellX_RegionY_Density_map            | Y    |
+| CellX_RegionY_Norm_Density_map       | Y    |
+| **Clus-DoC**                         |      |
+| CellX_RegionYRegion_with_Cluster     | Y    |
+| Pooled DoC histogram                 | Y*   |
+| Table_X_Region_Y_Hist                | Y    |
+| Table_X_Region_YDensity_ChZ          | Y    |
+| Table_X_Region_YDoC_ChZ              | Y    |
+| Table_X_Region_YRaw_data             | Y    |
+| Table_X_Region_YOutliers             | Y    |
+| **Clus-PoC**                         |      |
+| CellX_RegionYRegion_with_Cluster     | Y    |
+| Pooled PoC histogram                 | Y*   |
+| Table_X_Region_Y_Hist                | Y    |
+| Table_X_Region_YDensity_ChZ          | Y    |
+| Table_X_Region_YPoC_ChZ              | Y    |
+| Table_X_Region_YPoC_ChZ_log          | Y    |
+| Table_X_Region_YRaw_data             | Y    |
+| Table_X_Region_YOutliers             | Y    |
+
+(*): not handle fig save in catch (DoCHandler.m, PoCHandler.m)
+
 **for v1.2.0**
 
 - Add converter to convert Picasso hdf5 file to Zen format

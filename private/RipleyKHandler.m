@@ -103,8 +103,10 @@ function valOut = RipleyKHandler(handles, Fun_OutputFolder_name)
                         if(isCombined)
                             dirname = 'Combined';
                         end
-                        print(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', dirname, sprintf('Ripley_%dRegion_%d.tif', p, q)), ...
-                            handles.handles.RipleyKCh1Fig, '-dtiff');
+                        %print(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', dirname, sprintf('Ripley_%dRegion_%d.tif', p, q)), ...
+                        %    handles.handles.RipleyKCh1Fig, '-dtiff');
+                        save_plot(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', dirname, sprintf('Ripley_%dRegion_%d.tif', p, q)), ...
+                            handles.handles.RipleyKCh1Fig, handles.settings.AlsoSaveFig);
                         close(handles.handles.RipleyKCh1Fig);
 
                         Matrix_Result = [r, Lr_r];
@@ -173,8 +175,10 @@ function valOut = RipleyKHandler(handles, Fun_OutputFolder_name)
             'String', sprintf('Max L(r) - r: %.3f at Max r : %d', MaxLr_r, Max_r(i)), ...
             'FitBoxToText','on');
 
-        print(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', dirname, 'RipleyK_Average.tif'), ...
-            handles.handles.RipleyKMeanFig, '-dtiff');
+        %print(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', dirname, 'RipleyK_Average.tif'), ...
+        %    handles.handles.RipleyKMeanFig, '-dtiff');
+        save_plot(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', dirname, 'RipleyK_Average.tif'), handles.handles.RipleyKMeanFig, handles.settings.AlsoSaveFig); 
+        
         close(handles.handles.RipleyKMeanFig);
         
     end

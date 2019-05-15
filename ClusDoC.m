@@ -54,6 +54,8 @@ function settings = LoadSettings()
             settings.RoiSize = floor(str2double(C{2}));
         elseif strcmp(C{1}, 'draw_cluster_points_on_alpha_shape')
             settings.DrawPointOnAlphaShape = floor(str2double(C{2}));
+        elseif strcmp(C{1}, 'also_save_plots_as_fig')
+            settings.AlsoSaveFig = floor(str2double(C{2}));
         end
     end
     fclose(f);
@@ -65,6 +67,7 @@ function SaveSettings(handles)
     fprintf(f, 'roi_size_when_create_roi_by_click: %d\n', handles.settings.RoiSize);
     fprintf(f, 'show_scalebar: %d\n', handles.settings.ShowScalebar);
     fprintf(f, 'draw_cluster_points_on_alpha_shape: %d\n', handles.settings.DrawPointOnAlphaShape);
+    fprintf(f, 'also_save_plots_as_fig: %d\n', handles.settings.AlsoSaveFig);
     fclose(f);
 end
 
@@ -1912,6 +1915,7 @@ function RunDBSCAN(~, ~, ~)
                 dbscanParams = handles.DBSCAN(chan);
                 dbscanParams.Outputfolder = handles.Outputfolder;
                 dbscanParams.IsCombined = isCombined;
+                dbscanParams.settings = handles.settings;
                 
                 CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname));
                 CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname, 'Cluster maps'));
@@ -2115,14 +2119,14 @@ function RunDoC(~, ~, ~)
             UpdateStatusBar(handles, 'Calculating DoC...');
             [handles.CellData, DensityROI] = DoCHandler(handles.ROICoordinates, handles.CellData, ...
                 handles.DoC.Lr_rRad, handles.DoC.Rmax, handles.DoC.Step, ...
-                handles.Chan1Color, handles.Chan2Color, handles.Outputfolder, handles.NDataColumns);
+                handles.Chan1Color, handles.Chan2Color, handles.Outputfolder, handles.NDataColumns, handles.settings);
             
             %%%%%%%%%%%%%%%
             % Plotting, segmentation, and statistics start here
             
             UpdateStatusBar(handles, 'Processing DoC results...');
             ResultTable = ProcessDoCResults(handles.CellData, handles.NDataColumns, handles.ROICoordinates, ...
-                DensityROI, fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.DoC.ColoThres, handles.settings.ShowScalebar);
+                DensityROI, fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.DoC.ColoThres, handles.settings);
             
             
             % Run DBSCAN on data used for DoC analysis
@@ -2256,13 +2260,13 @@ function RunPoC(~, ~, ~)
             
             UpdateStatusBar(handles, 'Calculating PoC...');
             [handles.CellData, DensityROI] = PoCHandler(handles.ROICoordinates, handles.CellData, ...
-                handles.PoC.FuncType, handles.PoC.Lr_rRad, handles.PoC.Sigma, handles.Chan1Color, handles.Chan2Color, handles.Outputfolder, handles.NDataColumns);
+                handles.PoC.FuncType, handles.PoC.Lr_rRad, handles.PoC.Sigma, handles.Chan1Color, handles.Chan2Color, handles.Outputfolder, handles.NDataColumns, handles.settings);
             
             %%%%%%%%%%%%%%%
             % Plotting, segmentation, and statistics start here
             UpdateStatusBar(handles, 'Processing PoC results...');
             ResultTable = ProcessPoCResults(handles.CellData, handles.NDataColumns, handles.ROICoordinates, ...
-                DensityROI, fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.PoC.ColoThres, handles.settings.ShowScalebar);
+                DensityROI, fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.PoC.ColoThres, handles.settings);
             
             % Run DBSCAN on data used for DoC analysis
             UpdateStatusBar(handles, 'DBSCAN on PoC results...');

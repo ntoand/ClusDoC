@@ -350,7 +350,8 @@ try
             if(DBSCANParams.settings.ShowScalebar)
                 scalebar(ax1, MaxSize);
             end
-            print(fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cluster maps', Name), fig1, '-dtiff');
+            %print(fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cluster maps', Name), fig1, '-dtiff');
+            save_plot(fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cluster maps', Name), fig1, DBSCANParams.settings.AlsoSaveFig);
             close(fig1);
         end
 
@@ -392,8 +393,10 @@ try
             if(DBSCANParams.settings.ShowScalebar)
                 scalebar(ax2, MaxSize);
             end
-            print(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
-                dirname, 'Cluster density maps', Name), fig2, '-dtiff');
+            %print(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
+            %    dirname, 'Cluster density maps', Name), fig2, '-dtiff');
+            save_plot(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
+                dirname, 'Cluster density maps', Name), fig2, DBSCANParams.settings.AlsoSaveFig);
             close(fig2);
 
             Norm_Density = Density./max(Density(:));
@@ -422,8 +425,10 @@ try
             if(DBSCANParams.settings.ShowScalebar)
                 scalebar(ax3, MaxSize);
             end
-            print(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
-                dirname, 'Cluster density maps', Name), fig3, '-dtiff');
+            %print(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
+            %    dirname, 'Cluster density maps', Name), fig3, '-dtiff');
+            save_plot(fullfile(DBSCANParams.Outputfolder, 'DBSCAN Results', ...
+                dirname, 'Cluster density maps', Name), fig3, DBSCANParams.settings.AlsoSaveFig);
             close(fig3);
 
         end

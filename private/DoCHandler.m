@@ -1,4 +1,4 @@
-function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, Rmax, Step, Chan1Color, Chan2Color, Outputfolder, NDatacolumns)
+function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, Rmax, Step, Chan1Color, Chan2Color, Outputfolder, NDatacolumns, settings)
 
     % Handler function for data arrangement and plotting of DoC calculations
     % Formerly Main_Fun_DoC_GUIV2.m
@@ -60,8 +60,10 @@ function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, R
 
                 % Save the figure
                 Name = sprintf('Table_%d_Region_%d_Hist', cellIter, roiIter);
-                print(fullfile(Outputfolder, 'Clus-DoC Results', 'DoC histograms', Name), ...
-                    handles.handles.DoCFigPerROI, '-dtiff');
+                %print(fullfile(Outputfolder, 'Clus-DoC Results', 'DoC histograms', Name), ...
+                %    handles.handles.DoCFigPerROI, '-dtiff');
+                save_plot(fullfile(Outputfolder, 'Clus-DoC Results', 'DoC histograms', Name), ...
+                    handles.handles.DoCFigPerROI, settings.AlsoSaveFig);
 
                 close gcf
                 
@@ -134,8 +136,10 @@ function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, R
 
     % Save the figure
     try 
-        print(fullfile(Outputfolder, 'Clus-DoC Results', 'DoC histograms', 'Pooled DoC histogram.tif'), ...
-            handles.handles.DoCFig, '-dtiff');
+        %print(fullfile(Outputfolder, 'Clus-DoC Results', 'DoC histograms', 'Pooled DoC histogram.tif'), ...
+        %    handles.handles.DoCFig, '-dtiff');
+        save_plot(fullfile(Outputfolder, 'Clus-DoC Results', 'DoC histograms', 'Pooled DoC histogram.tif'), ...
+            handles.handles.DoCFig, settings.AlsoSaveFig);
     catch
         currFig = getframe(handles.handles.DoCFig);
         imwrite(currFig.cdata, fullfile(Outputfolder, 'Clus-DoC Results', 'DoC histograms', 'Pooled DoC histogram.tif'));

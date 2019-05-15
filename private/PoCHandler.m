@@ -1,4 +1,4 @@
-function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType, Lr_rRad, Sigma, Chan1Color, Chan2Color, Outputfolder, NDatacolumns)
+function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType, Lr_rRad, Sigma, Chan1Color, Chan2Color, Outputfolder, NDatacolumns, settings)
 
     % Handler function for data arrangement and plotting of PoC calculations
     
@@ -51,9 +51,10 @@ function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType,
 
                 % Save the figure
                 Name = sprintf('Table_%d_Region_%d_Hist', cellIter, roiIter);
-                print(fullfile(Outputfolder, 'Clus-PoC Results', 'PoC histograms', Name), ...
-                    handles.handles.PoCFigPerROI, '-dtiff');
-
+                %print(fullfile(Outputfolder, 'Clus-PoC Results', 'PoC histograms', Name), ...
+                %    handles.handles.PoCFigPerROI, '-dtiff');
+                save_plot(fullfile(Outputfolder, 'Clus-PoC Results', 'PoC histograms', Name), ...
+                    handles.handles.PoCFigPerROI, settings.AlsoSaveFig);
                 close gcf
                 
                 CellData{cellIter}(whichPointsInROI, NDatacolumns + 10) = Data_DegColoc1.PoC; % col 4: DoC
@@ -125,8 +126,10 @@ function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType,
 
     % Save the figure
     try 
-        print(fullfile(Outputfolder, 'Clus-PoC Results', 'PoC histograms', 'Pooled PoC histogram.tif'), ...
-            handles.handles.PoCFig, '-dtiff');
+        %print(fullfile(Outputfolder, 'Clus-PoC Results', 'PoC histograms', 'Pooled PoC histogram.tif'), ...
+        %    handles.handles.PoCFig, '-dtiff');
+        save_plot(fullfile(Outputfolder, 'Clus-PoC Results', 'PoC histograms', 'Pooled PoC histogram.tif'), ...
+            handles.handles.PoCFig, settings.AlsoSaveFig);
     catch
         currFig = getframe(handles.handles.PoCFig);
         imwrite(currFig.cdata, fullfile(Outputfolder, 'Clus-PoC Results', 'PoC histograms', 'Pooled PoC histogram.tif'));
