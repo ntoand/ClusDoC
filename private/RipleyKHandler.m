@@ -7,19 +7,8 @@ function valOut = RipleyKHandler(handles, Fun_OutputFolder_name)
     Step = handles.RipleyK.Step;
     MaxSampledPts = handles.RipleyK.MaxSampledPts;
     
-    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
-    if(handles.Nchannels == 1)
-        numChannels = 1;
-    else
-        numChannels = handles.Nchannels + 1; % with combined data channel
-    end
-    if(isCombined)
-        channels = 3;  % [3]
-    else
-        channels = 1:handles.Nchannels; % e,g, [1, 2]
-    end
-    
-
+    numChannels = numel(handles.Ripley_channels);
+ 
     ArrayHeader = [{'r'},{'L(r)-r'}];
 
     i = 0;
@@ -64,28 +53,22 @@ function valOut = RipleyKHandler(handles, Fun_OutputFolder_name)
                     selectVector = false(size(dataCropped, 1), 1);
                     selectVector(selectNums) = true;
 
-                    for chan = channels
-
-                        if chan == 1
-                            plotColor = handles.Chan1Color;
-                        elseif chan == 2
-                            plotColor = handles.Chan2Color;
-                        else
-                            plotColor = handles.CombinedColor;
-                        end
-
-                        if(~isCombined)
-                            [r, Lr_r] = RipleyKFun(dataCropped(selectVector & (dataCropped(:,12) == chan),5:6), ...
+                    for chan = 1:numChannels
+                        plotColor = handles.ChanColors(chan, :);
+                        
+                        if(numel(handles.Ripley_channels{chan}.Channels) == 1)
+                            ch = handles.Ripley_channels{chan}.Channels(1);
+                            [r, Lr_r] = RipleyKFun(dataCropped(selectVector & (dataCropped(:,12) == ch),5:6), ...
                                 A, Start, End, Step, size_ROI);
                         else
-                            [r, Lr_r] = RipleyKFun(dataCropped(selectVector,5:6), ...
-                                A, Start, End, Step, size_ROI);
+                            ch1 = handles.Ripley_channels{chan}.Channels(1); ch2 = handles.Ripley_channels{chan}.Channels(2);
+                            xCh = [dataCropped(selectVector & (dataCropped(:,12) == ch1),5:6); dataCropped(selectVector & (dataCropped(:,12) == ch2),5:6)];
+                            [r, Lr_r] = RipleyKFun(xCh, A, Start, End, Step, size_ROI);
                         end
 
                         handles.handles.RipleyKCh1Fig = figure('color', [1 1 1]);
                         handles.handles.RipleyKCh1Ax = axes('parent', handles.handles.RipleyKCh1Fig);
                         plot(handles.handles.RipleyKCh1Ax, r, Lr_r, 'color', plotColor, 'linewidth', 2);
-
 
                         % Collect results from these calculations
                         [MaxLr_r, Index] = max(Lr_r);
@@ -99,10 +82,7 @@ function valOut = RipleyKHandler(handles, Fun_OutputFolder_name)
                         xlabel(handles.handles.RipleyKCh1Ax, 'r (nm)', 'fontsize', 12);
                         ylabel(handles.handles.RipleyKCh1Ax, 'L(r) - r', 'fontsize', 12);
 
-                        dirname = sprintf('Ch%d', chan);
-                        if(isCombined)
-                            dirname = 'Combined';
-                        end
+                        dirname = handles.Ripley_channels{chan}.Name;
                         %print(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', dirname, sprintf('Ripley_%dRegion_%d.tif', p, q)), ...
                         %    handles.handles.RipleyKCh1Fig, '-dtiff');
                         save_plot(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', dirname, sprintf('Ripley_%dRegion_%d.tif', p, q)), ...
@@ -121,29 +101,19 @@ function valOut = RipleyKHandler(handles, Fun_OutputFolder_name)
         end
     end
 
-    for chan = channels
+    for chan = 1:numChannels
         
         Average_Lr_r(:,1) = r;
         Average_Lr_r(:, 2) = squeeze(mean(Lr_r_Result(:,:,chan), 2));
         Std_Lr_r(:,2) = std(Lr_r_Result(:,:,chan), 0, 2);
     
-        if chan == 1
-            plotColor = handles.Chan1Color;
-        elseif chan == 2
-            plotColor = handles.Chan2Color;
-        else
-            plotColor = handles.CombinedColor;
-        end
+        plotColor = handles.ChanColors(chan, :);
         
         Max_r_Ave=[mean(Max_r(:,chan)), std(Max_r(:,chan))];
         Max_Lr_Ave=[mean(Max_Lr(:,chan)), std(Max_Lr(:,chan))];
 
-        dirname = sprintf('Ch%d', chan);
-        filename = sprintf('Ch%dPooled.xls', chan);
-        if(isCombined)
-            dirname = 'Combined';
-            filename = 'CombinedPooled.xls';
-        end
+        dirname = handles.Ripley_channels{chan}.Name;
+        filename = sprintf('%sPooled.xls', handles.Ripley_channels{chan}.Name);
         % only write excel file on PC
         if ispc
             % Data average on all the regions and cells

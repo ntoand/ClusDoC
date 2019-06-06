@@ -90,12 +90,8 @@ try
 
         end
         
-        dirname = sprintf('Ch%d', DBSCANParams.CurrentChannel);
-        if(DBSCANParams.IsCombined)
-         dirname = 'Combined';
-        end
-       
-
+        dirname = DBSCANParams.Name;
+     
         % Calculate Lr for cumulated channels ch1
         % 
 
@@ -338,7 +334,7 @@ try
             end
         end
         
-        UpdateMainStatusBar('DBSCAN completed');
+        UpdateMainStatusBar('DBSCAN completed, now plotting...');
         
         ClusterSmooth = ClusterSmooth(~cellfun('isempty', ClusterSmooth));
 

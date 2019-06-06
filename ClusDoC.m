@@ -1,7 +1,7 @@
 function ClusDoC(varargin)
     close all; % for easier debugging
     clear;
-    DEBUG = false;
+    DEBUG = true;
     if(DEBUG)
         addpath('dev'); % "ln -s private dev" to debug line by line in private funcs
     end
@@ -298,7 +298,7 @@ function DoCGUIInitialize(varargin)
     xbutton2=col2_x;
     ybutton2=ybutton + butt_offset_y;
     handles.handles.popupProcessType = uicontrol(handles.handles.b_panel, 'Units', 'normalized', 'Style', 'popup', 'String', ...
-        {'Channels 1 and 2 separately', 'Combined data'},...
+        {'Channels separately', 'Combined pairs of channels', 'Both (channels and pairs)'},...
         'Position', [xbutton2 ybutton2 w2 h2], 'Callback', @popupProcessType_Callback, 'Tag', 'SelectMask');
 
     
@@ -418,6 +418,7 @@ function initializeParameters(varargin)
     handles.CONST.DEFAULT_ROI_SIZE = 4000;
     handles.CONST.PROCESS_SEPARATE = 1;
     handles.CONST.PROCESS_COMBINED = 2;
+    handles.CONST.PROCESS_BOTH = 3;
     handles.CONST.POC_TYPE1 = 1;    % poc = sumA / (sumA + sumB)
     handles.CONST.POC_TYPE2 = 2;    % poc = sumA / sumB
     
@@ -435,6 +436,7 @@ function initializeParameters(varargin)
     handles.ROISize = handles.CONST.DEFAULT_ROI_SIZE; % Length of ROI, in nm
 
     % Initialize some global settings
+    handles.ChanColors = distinguishable_colors(10);
     handles.Chan1Color = [46, 204, 113]/255; % Flat UI Emerald
     handles.Chan2Color = [231, 76, 60]/255; % Flat UI Alizarin
     handles.CombinedColor = [0, 0, 255]/255;
@@ -448,8 +450,8 @@ function initializeParameters(varargin)
     handles.RipleyK.MaxSampledPts = 1e4;
     
     % Default DBSCAN parameters
-    % for channel1, channel2, combined data
-    for k = 1:3
+    % maximum for 4 channels = 10
+    for k = 1:10
         handles.DBSCAN(k).Epsilon = 20;
         handles.DBSCAN(k).MinPts = 3;
         handles.DBSCAN(k).UseLr_rThresh = true;
@@ -548,19 +550,18 @@ end
 function FunPlot(whichCell)
 
     handles = guidata(findobj('Tag', 'PALM GUI'));
-
-    if numel(unique(handles.CellData{whichCell}(:,12))) == 1
-        handles.handles.dSTORM_plot = plot(handles.handles.ax_h, handles.CellData{whichCell}(:,5), handles.CellData{whichCell}(:,6), ...
-            'Marker','.','MarkerSize',3,'LineStyle','none',...
-            'color','red', 'Tag', 'dSTORM_plot');
-    else
-        handles.handles.dSTORM_plot = plot(handles.handles.ax_h, handles.CellData{whichCell}(handles.CellData{whichCell}(:, 12) == 1, 5), ...
-            handles.CellData{whichCell}(handles.CellData{whichCell}(:, 12) == 1, 6),...
-            'Marker','.','MarkerSize',3,'LineStyle', 'none', 'color', handles.Chan1Color, 'Tag', 'dSTORM_plot');
+    
+    numchannels = handles.Nchannels;
+    for cc = 1:numchannels-1
+        handles.handles.dSTORM_plot = plot(handles.handles.ax_h, handles.CellData{whichCell}(handles.CellData{whichCell}(:, 12) == cc, 5), ...
+            handles.CellData{whichCell}(handles.CellData{whichCell}(:, 12) == cc, 6),...
+            'Marker','.','MarkerSize',3,'LineStyle', 'none', 'color', handles.ChanColors(cc, :), 'Tag', 'dSTORM_plot');
         set(handles.handles.ax_h, 'NextPlot', 'add');
-        handles.handles.dSTORM_plot = plot(handles.handles.ax_h, handles.CellData{whichCell}(handles.CellData{whichCell}(:, 12) == 2, 5), ...
-            handles.CellData{whichCell}(handles.CellData{whichCell}(:, 12) == 2, 6), ...
-            'Marker','.','MarkerSize',3,'LineStyle','none','color', handles.Chan2Color, 'Tag', 'dSTORM_plot');
+    end
+    handles.handles.dSTORM_plot = plot(handles.handles.ax_h, handles.CellData{whichCell}(handles.CellData{whichCell}(:, 12) == numchannels, 5), ...
+            handles.CellData{whichCell}(handles.CellData{whichCell}(:, 12) == numchannels, 6),...
+            'Marker','.','MarkerSize',3,'LineStyle', 'none', 'color', handles.ChanColors(numchannels, :), 'Tag', 'dSTORM_plot');
+    if(numchannels > 1)
         set(handles.handles.ax_h, 'NextPlot', 'replace');
     end
     
@@ -761,8 +762,8 @@ function Load_Data(~,~,~)
     set(get(handles.handles.b_panel, 'children'), 'enable', 'off');
 
     if (handles.DEBUG)
-        fileName = 'roi5_cut2_rpe1_dorsal_gal3_mab13_grouped_PALM_Channel Alignment.txt';
-        pathName = sprintf('%s/test_dataset/2/', pwd);
+        fileName = '1.txt';
+        pathName = sprintf('%s/test_dataset/3channels/Condition1_3G/', pwd);
         filterIndex = 1;
     else
         [fileName, pathName, filterIndex] = uigetfile({'*.txt', 'ZEN export table'; '*.csv', 'ThunderSTORM Export table'},'Select ZEN export files', 'MultiSelect', 'on');
@@ -1526,11 +1527,32 @@ function RipleyKtest(~, ~, ~)
     CurrentROI = handles.ROICoordinates{handles.CurrentCellData}{handles.CurrentROIData};
     CurrentROI = [CurrentROI(1,1),  CurrentROI(1,2), max(CurrentROI(:,1)) - min(CurrentROI(:,1)), max(CurrentROI(:,2)) - min(CurrentROI(:,2))];
     
+    % channel names
+    numchannels = handles.Nchannels;
+    ind = 1;
+    Ripley_channels = {};
+    if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+        for ch = 1:numchannels
+            Ripley_channels{ind}.Name = sprintf('Ch%d', ch);
+            Ripley_channels{ind}.Channels = ind;
+            ind = ind + 1;
+        end
+    end
+    if (handles.ProcessType == handles.CONST.PROCESS_COMBINED || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+        for ch1 =1:numchannels-1
+            for ch2 = ch1+1:numchannels
+                Ripley_channels{ind}.Name = sprintf('Pair_Ch%d_Ch%d', ch1, ch2);
+                Ripley_channels{ind}.Channels = [ch1 ch2];
+                ind = ind + 1;
+            end
+        end
+    end
+    
     % RipleyK parameter
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Launch GUI window to change the set parameters, if desired
     [handles, returnVal] = InputDialogs(handles, 'ripley');
-
+    
     if returnVal == 0
         set(handles.handles.MainFig, 'pointer', 'arrow');
         set(findobj('parent', handles.handles.b_panel), 'enable', 'on');
@@ -1545,6 +1567,7 @@ function RipleyKtest(~, ~, ~)
             % Since which ROI a point falls in is encoded in binary, decode here
             whichPointsInROI = fliplr(dec2bin(handles.CellData{handles.CurrentCellData}(:,handles.NDataColumns + 1)));
             whichPointsInROI = whichPointsInROI(:,handles.CurrentROIData) == '1';
+            dataCropped = handles.CellData{handles.CurrentCellData}(whichPointsInROI, :);
             
             handles.RipleyK.size_ROI = CurrentROI(3:4);
             handles.RipleyK.Area = polyarea(handles.ROICoordinates{handles.CurrentCellData}{handles.CurrentROIData}(:,1), ...
@@ -1554,85 +1577,38 @@ function RipleyKtest(~, ~, ~)
                 handles.Nchannels);
             handles.RipleyK.Lr_r = zeros(((handles.RipleyK.End - handles.RipleyK.Start)/handles.RipleyK.Step + 1), ...
                 handles.Nchannels);
-            
-            if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE)
-                xCh1 = handles.CellData{handles.CurrentCellData}(whichPointsInROI & ...
-                    (handles.CellData{handles.CurrentCellData}(:, handles.NDataColumns - 1) == 1), 5:6);
-
-                xCh2 = handles.CellData{handles.CurrentCellData}(whichPointsInROI & ...
-                    (handles.CellData{handles.CurrentCellData}(:, handles.NDataColumns - 1) == 2), 5:6);
-                
-                % Sub-sample each Ch1 and Ch2 points to improve RipleyK calculation
-                % speed, provide even density between samples
-                if size(xCh1, 1) > handles.RipleyK.MaxSampledPts
-                    rKsubsample = randsample(1:size(xCh1, 1), handles.RipleyK.MaxSampledPts);
-                    xCh1 = xCh1(rKsubsample, :);
-                end
-
-                if size(xCh2, 1) > handles.RipleyK.MaxSampledPts
-                    rKsubsample = randsample(1:size(xCh2, 1), handles.RipleyK.MaxSampledPts);
-                    xCh2 = xCh2(rKsubsample, :);
+                      
+            for chan = 1:numel(Ripley_channels)
+                if(numel(Ripley_channels{chan}.Channels) == 1)
+                    ch = Ripley_channels{chan}.Channels(1);
+                    xCh = dataCropped(dataCropped(:,12) == ch, 5:6);
+                else
+                    ch1 = Ripley_channels{chan}.Channels(1); ch2 = Ripley_channels{chan}.Channels(2);
+                    xCh = [dataCropped(dataCropped(:,12) == ch1, 5:6); dataCropped(dataCropped(:,12) == ch2, 5:6)];
                 end
                 
-                % Channel 1
-                [handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1)] = RipleyKFun( xCh1, handles.RipleyK.Area, ...
+                if size(xCh, 1) > handles.RipleyK.MaxSampledPts
+                    fprintf('WARNING: reduce sample size');
+                    rKsubsample = randsample(1:size(xCh, 1), handles.RipleyK.MaxSampledPts);
+                    xCh = xCh(rKsubsample, :);
+                end
+
+                [handles.RipleyK.r(:,chan), handles.RipleyK.Lr_r(:,chan)] = RipleyKFun( xCh, handles.RipleyK.Area, ...
                     handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
                     handles.RipleyK.size_ROI);
                 % Plot
-                handles.handles.RipleyKCh1Fig = figure('Name','Active ROI Ch1', 'color', [1 1 1]); 
-                handles.handles.RipleyKCh1Ax = axes('parent', handles.handles.RipleyKCh1Fig);
-                plot(handles.handles.RipleyKCh1Ax, handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1), ...
-                    'linewidth', 2, 'color', handles.Chan1Color);
-                set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'add', 'fontsize', 12);
-                title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCh1, 1), CurrentROI(3), CurrentROI(4));
+                handles.handles.RipleyKChFig(chan) = figure('Name', sprintf('Active ROI %s', Ripley_channels{chan}.Name), 'color', [1 1 1]); 
+                handles.handles.RipleyKChAx(chan) = axes('parent', handles.handles.RipleyKChFig(chan));
+                plot(handles.handles.RipleyKChAx(chan), handles.RipleyK.r(:,chan), handles.RipleyK.Lr_r(:,chan), ...
+                    'linewidth', 2, 'color', handles.ChanColors(chan, :));
+                set(handles.handles.RipleyKChAx(chan), 'NextPlot', 'add', 'fontsize', 12);
+                title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCh, 1), CurrentROI(3), CurrentROI(4));
                 title(title_name);
-                xlabel(handles.handles.RipleyKCh1Ax, 'r (nm)', 'fontsize', 12);
-                ylabel(handles.handles.RipleyKCh1Ax, 'L(r)-r', 'fontsize', 12);
-                set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'replace');
-                
-                % Channel 2
-                if handles.Nchannels == 2
-                    %Ch2
-                    % RipleyK function
-                    [handles.RipleyK.r(:,2), handles.RipleyK.Lr_r(:,2)] = RipleyKFun( xCh2, handles.RipleyK.Area, ...
-                    handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
-                    handles.RipleyK.size_ROI);
-                    % Plot
-                    handles.handles.RipleyKCh2Fig = figure('Name','Active ROI Ch2', 'color', [1 1 1]); 
-                    handles.handles.RipleyKCh2Ax = axes('parent', handles.handles.RipleyKCh2Fig, 'fontsize', 12);
-                    plot(handles.handles.RipleyKCh2Ax, handles.RipleyK.r(:,2), handles.RipleyK.Lr_r(:,2), ...
-                         'linewidth', 2, 'color', handles.Chan2Color);
-                    set(handles.handles.RipleyKCh2Ax, 'NextPlot', 'add', 'fontsize', 12);
-                    title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCh2, 1), CurrentROI(3), CurrentROI(4));
-                    title(title_name);
-                    xlabel(handles.handles.RipleyKCh2Ax, 'r (nm)', 'fontsize', 12);
-                    ylabel(handles.handles.RipleyKCh2Ax, 'L(r)-r', 'fontsize', 12);
-                    set(handles.handles.RipleyKCh2Ax, 'NextPlot', 'replace');
-                end 
-                
-            else % combined data
-                xCombined = handles.CellData{handles.CurrentCellData}(whichPointsInROI, 5:6);
-                if size(xCombined, 1) > handles.RipleyK.MaxSampledPts
-                    rKsubsample = randsample(1:size(xCombined, 1), handles.RipleyK.MaxSampledPts);
-                    xCombined = xCombined(rKsubsample, :);
-                end
-                
-                [handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1)] = RipleyKFun( xCombined, handles.RipleyK.Area, ...
-                    handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
-                    handles.RipleyK.size_ROI);
-                % Plot
-                handles.handles.RipleyKCh1Fig = figure('Name','Active ROI combined data', 'color', [1 1 1]); 
-                handles.handles.RipleyKCh1Ax = axes('parent', handles.handles.RipleyKCh1Fig);
-                plot(handles.handles.RipleyKCh1Ax, handles.RipleyK.r(:,1), handles.RipleyK.Lr_r(:,1), ...
-                    'linewidth', 2, 'color', handles.CombinedColor);
-                set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'add', 'fontsize', 12);
-                title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCombined, 1), CurrentROI(3), CurrentROI(4));
-                title(title_name);
-                xlabel(handles.handles.RipleyKCh1Ax, 'r (nm)', 'fontsize', 12);
-                ylabel(handles.handles.RipleyKCh1Ax, 'L(r)-r', 'fontsize', 12);
-                set(handles.handles.RipleyKCh1Ax, 'NextPlot', 'replace');
+                xlabel(handles.handles.RipleyKChAx(chan), 'r (nm)', 'fontsize', 12);
+                ylabel(handles.handles.RipleyKChAx(chan), 'L(r)-r', 'fontsize', 12);
+                set(handles.handles.RipleyKChAx(chan), 'NextPlot', 'replace');
             end
-           
+            
             % update GUI
             set(handles.handles.MainFig, 'pointer', 'arrow');
             set(findobj('parent', handles.handles.b_panel), 'enable', 'on');
@@ -1656,6 +1632,7 @@ function RipleyKtest(~, ~, ~)
     
 end
 
+
 % Function DBSCAN Test for active ROI
 function DBSCAN_Test(~, ~, ~)
 
@@ -1665,12 +1642,34 @@ function DBSCAN_Test(~, ~, ~)
     set(findobj('parent', handles.handles.b_panel), 'enable', 'off');
     UpdateStatusBar(handles, 'DBSCAN test on ROI...');
     drawnow;
-
-    for ch = 1:3
-        handles.DBSCAN(ch).UseLr_rThresh = false;
-        handles.DBSCAN(ch).DoStats = false;
-        handles.DBSCAN(ch).settings = handles.settings;
+    
+    numchannels = handles.Nchannels;
+    ind = 1;
+    handles.DBSCAN_channels = {};
+    if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+        for ch = 1:numchannels
+            handles.DBSCAN(ind).Name = sprintf('Ch%d', ch);
+            handles.DBSCAN(ind).UseLr_rThresh = false;
+            handles.DBSCAN(ind).DoStats = false;
+            handles.DBSCAN(ind).settings = handles.settings;
+            handles.DBSCAN_channels{ind} = handles.DBSCAN(ind).Name;
+            ind = ind + 1;
+        end
     end
+    
+    if (handles.ProcessType == handles.CONST.PROCESS_COMBINED || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+        for ch1 =1:numchannels-1
+            for ch2 = ch1+1:numchannels
+                handles.DBSCAN(ind).Name = sprintf('Pair_Ch%d_Ch%d', ch1, ch2);
+                handles.DBSCAN(ind).UseLr_rThresh = false;
+                handles.DBSCAN(ind).DoStats = false;
+                handles.DBSCAN(ind).settings = handles.settings;
+                handles.DBSCAN_channels{ind} = handles.DBSCAN(ind).Name;
+                ind = ind + 1;
+            end
+        end
+    end
+    
     
     %returnVal = setDBSCANParameters(handles, false);
     %handles = guidata(findobj('Tag', 'PALM GUI'));
@@ -1692,62 +1691,54 @@ function DBSCAN_Test(~, ~, ~)
             whichPointsInROI = whichPointsInROI(:,handles.CurrentROIData) == '1';
             dataCropped = handles.CellData{handles.CurrentCellData}(whichPointsInROI, :);
             
-            if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE)
-                dbscanParams = handles.DBSCAN(1);
-                dbscanParams.Outputfolder = handles.Outputfolder;
-                dbscanParams.CurrentChannel = 1;
-                dbscanParams.IsCombined = false;
-                
-                % Channel 1
-                [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 1, 5:6), dbscanParams, ...
-                    dataCropped(dataCropped(:,12) == 1, handles.NDataColumns + 2)); 
-              
-                handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == 1),...
-                    handles.NDataColumns + 3) = classOut;
-
-                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 1, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut, dataCropped(:,12));
-                set(handles.handles.ExportResultsButton, 'enable', 'on');
-                
-                set(figOut, 'Name', 'DBSCAN Active ROI Ch1')
-                
-                % Channel 2
-                if handles.Nchannels == 2
-
-                    dbscanParams = handles.DBSCAN(2);
+            ind = 1;
+            if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+                for ch = 1:numchannels
+                    dbscanParams = handles.DBSCAN(ind);
                     dbscanParams.Outputfolder = handles.Outputfolder;
-                    dbscanParams.CurrentChannel = 2;
-                    dbscanParams.IsCombined = false;
-
-                    [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(dataCropped(:,12) == 2, 5:6), dbscanParams, ...
-                        dataCropped(dataCropped(:,12) == 2, handles.NDataColumns + 2));
-          
-                    handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == 2),...
-                        handles.NDataColumns + 3) = classOut;
-                    set(figOut, 'Name', 'DBSCAN Active ROI Ch2')
-
-                    handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 2, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut, dataCropped(:,12));
+                    dbscanParams.CurrentChannel = ind;
+                    
+                    dataToProcess = dataCropped(dataCropped(:,12) == ch, 5:6);
+                    maskVector = dataCropped(dataCropped(:,12) == ch, handles.NDataColumns + 2);
+                    [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataToProcess, dbscanParams, maskVector);
+                    
+                    handles.CellData{handles.CurrentCellData}(whichPointsInROI & (handles.CellData{handles.CurrentCellData}(:,12) == ch), handles.NDataColumns + 3) = classOut;
+                    
+                    handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, ind, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut, dataCropped(:,12));
+                    set(handles.handles.ExportResultsButton, 'enable', 'on');
+                    
+                    set(figOut, 'Name', sprintf('DBSCAN Active ROI %s', handles.DBSCAN(ind).Name));
+                    
+                    ind = ind + 1;
                 end
-                
-                handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 9) = 0;
-                
-                
-            else % combined data
-                dbscanParams = handles.DBSCAN(3);
-                dbscanParams.Outputfolder = handles.Outputfolder;
-                dbscanParams.CurrentChannel = 3;
-                dbscanParams.IsCombined = true;
-                
-                [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataCropped(:, 5:6), dbscanParams, ...
-                    dataCropped(:, handles.NDataColumns + 2)); 
-           
-                handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 9) = classOut;
-
-                handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, 3, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut, dataCropped(:,12));
-                set(handles.handles.ExportResultsButton, 'enable', 'on');
-                
-                set(figOut, 'Name', 'DBSCAN Active ROI Combined data')
             end
+            
+            if (handles.ProcessType == handles.CONST.PROCESS_COMBINED || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+                combinedClusterIDIndex = handles.NDataColumns + 10; %first cluster index column index
+                for ch1 =1:numchannels-1
+                    for ch2 = ch1+1:numchannels
+                        dbscanParams = handles.DBSCAN(ind);
+                        dbscanParams.Outputfolder = handles.Outputfolder;
+                        dbscanParams.CurrentChannel = ind;
+                        
+                        dataToProcess = [dataCropped(dataCropped(:,12) == ch1, 5:6); dataCropped(dataCropped(:,12) == ch2, 5:6)];
+                        maskVector = [dataCropped(dataCropped(:,12) == ch1, handles.NDataColumns + 2); dataCropped(dataCropped(:,12) == ch2, handles.NDataColumns + 2)];
+                        [~, ClusterCh, ~, classOut, figOut] = DBSCANHandler(dataToProcess, dbscanParams, maskVector);
+                        
+                        pairIndex = handles.CellData{handles.CurrentCellData}(:,12) == ch1 | handles.CellData{handles.CurrentCellData}(:,12) == ch2;
+                        handles.CellData{handles.CurrentCellData}(whichPointsInROI & pairIndex, combinedClusterIDIndex) = classOut;
+                        combinedClusterIDIndex = combinedClusterIDIndex + 1;
+                        
+                        handles.ClusterTable = AppendToClusterTable(handles.ClusterTable, ind, handles.CurrentCellData, handles.CurrentROIData, ClusterCh, classOut, dataCropped(:,12));
+                        set(handles.handles.ExportResultsButton, 'enable', 'on');
 
+                        set(figOut, 'Name', sprintf('DBSCAN Active ROI %s', handles.DBSCAN(ind).Name));
+                        
+                        ind = ind + 1;
+                    end
+                end
+            end
+            
             set(handles.handles.MainFig, 'pointer', 'arrow');
             set(findobj('parent', handles.handles.b_panel), 'enable', 'on');
             if handles.Nchannels == 1
@@ -1789,7 +1780,29 @@ function RunRipleyK(~, ~, ~)
     set(get(handles.handles.b_panel, 'children'), 'enable', 'off');
     UpdateStatusBar(handles, 'Running RippleK on ROI...');
     drawnow;
+    
+    % channel names
+    numchannels = handles.Nchannels;
+    ind = 1;
+    handles.Ripley_channels = {};
+    if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+        for ch = 1:numchannels
+            handles.Ripley_channels{ind}.Name = sprintf('Ch%d', ch);
+            handles.Ripley_channels{ind}.Channels = ind;
+            ind = ind + 1;
+        end
+    end
+    if (handles.ProcessType == handles.CONST.PROCESS_COMBINED || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+        for ch1 =1:numchannels-1
+            for ch2 = ch1+1:numchannels
+                handles.Ripley_channels{ind}.Name = sprintf('Pair_Ch%d_Ch%d', ch1, ch2);
+                handles.Ripley_channels{ind}.Channels = [ch1 ch2];
+                ind = ind + 1;
+            end
+        end
+    end
 
+    % 
     [handles, returnVal] = InputDialogs(handles, 'ripley'); % re-set RipleyK parameters if desired
     
     if returnVal == 0
@@ -1817,16 +1830,11 @@ function RunRipleyK(~, ~, ~)
             CreateDir(Fun_OutputFolder_name);
             CreateDir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots'));
             CreateDir(fullfile(Fun_OutputFolder_name, 'RipleyK Results'));
-            if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE)
-                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', 'Ch1'));
-                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', 'Ch2'));
-                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Results', 'Ch1'));
-                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Results', 'Ch2'));
-            else
-                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', 'Combined'));
-                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Results', 'Combined'));
+            for chan = 1:numel(handles.Ripley_channels)
+                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Plots', handles.Ripley_channels{chan}.Name));
+                mkdir(fullfile(Fun_OutputFolder_name, 'RipleyK Results', handles.Ripley_channels{chan}.Name));
             end
-
+            
             [~] = RipleyKHandler(handles, Fun_OutputFolder_name);
             
         catch mError
@@ -1869,11 +1877,37 @@ function RunDBSCAN(~, ~, ~)
     drawnow;
 
     CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results'));
-
-    for ch = 1:3
-        handles.DBSCAN(ch).UseLr_rThresh = true;
-        handles.DBSCAN(ch).DoStats = true;
-        handles.DBSCAN(ch).settings = handles.settings;
+    
+    numchannels = handles.Nchannels;
+    ind = 1;
+    handles.DBSCAN_channels = {};
+    if(handles.ProcessType == handles.CONST.PROCESS_SEPARATE || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+        for ch = 1:numchannels
+            handles.DBSCAN(ind).Name = sprintf('Ch%d', ch);
+            handles.DBSCAN(ind).UseLr_rThresh = true;
+            handles.DBSCAN(ind).DoStats = true;
+            handles.DBSCAN(ind).settings = handles.settings;
+            handles.DBSCAN(ind).Channels = ch;
+            handles.DBSCAN_channels{ind} = handles.DBSCAN(ind).Name;
+            ind = ind + 1;
+        end
+    end
+    
+    ClusterIDIndex = handles.NDataColumns + 10; %first cluster index column index;
+    if (handles.ProcessType == handles.CONST.PROCESS_COMBINED || handles.ProcessType == handles.CONST.PROCESS_BOTH)
+        for ch1 =1:numchannels-1
+            for ch2 = ch1+1:numchannels
+                handles.DBSCAN(ind).ClusterIDIndex = ClusterIDIndex;
+                handles.DBSCAN(ind).Name = sprintf('Pair_Ch%d_Ch%d', ch1, ch2);
+                handles.DBSCAN(ind).UseLr_rThresh = true;
+                handles.DBSCAN(ind).DoStats = true;
+                handles.DBSCAN(ind).settings = handles.settings;
+                handles.DBSCAN(ind).Channels = [ch1 ch2];
+                handles.DBSCAN_channels{ind} = handles.DBSCAN(ind).Name;
+                ind = ind + 1;
+                ClusterIDIndex = ClusterIDIndex + 1;
+            end
+        end
     end
     
     %returnVal = setDBSCANParameters(handles, true);
@@ -1897,24 +1931,12 @@ function RunDBSCAN(~, ~, ~)
         % Can parfor this?
         try   
             
-            isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
-            if(isCombined)
-                channels = 3;  % [3]
-            else
-                channels = 1:handles.Nchannels; % e,g, [1, 2]
-            end
-            
-            for chan = channels
+            for chan = 1:numel(handles.DBSCAN_channels)
                 
-                if(isCombined)
-                    dirname = 'Combined';
-                else
-                    dirname = sprintf('Ch%d', chan);
-                end
+                dirname = handles.DBSCAN(chan).Name;
                 
                 dbscanParams = handles.DBSCAN(chan);
                 dbscanParams.Outputfolder = handles.Outputfolder;
-                dbscanParams.IsCombined = isCombined;
                 dbscanParams.settings = handles.settings;
                 
                 CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname));
@@ -1922,13 +1944,9 @@ function RunDBSCAN(~, ~, ~)
                 CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname, 'Cluster density maps'));
                 
                 dbscanParams.CurrentChannel = chan;
-                
-                if chan == 1
-                    clusterColor = handles.Chan1Color;
-                elseif chan == 2
-                    clusterColor = handles.Chan2Color;
-                else
-                    clusterColor = handles.CombinedColor;
+                clusterColor = handles.ChanColors(chan, :);
+                if(handles.ProcessType == handles.CONST.PROCESS_COMBINED)
+                    clusterColor = handles.ChanColors(chan + numchannels, :);
                 end
                 
                 cellROIPair = [];    
@@ -1949,32 +1967,31 @@ function RunDBSCAN(~, ~, ~)
                         whichPointsInROI = whichPointsInROI(:,roiInc) == '1';
 
                         dataCropped = handles.CellData{c}(whichPointsInROI, :);
+                        channels = handles.DBSCAN(chan).Channels;
 
                         if ~isempty(dataCropped)
                             
-                            % DBSCANHandler(Data, DBSCANParams, varargin)
-                            %         p = varargin{1}; % Labeling only
-                            %         q = varargin{2}; % Labeling only
-                            %         display1 = varargin{3};
-                            %         display2 = varargin{4};
-                            %         clusterColor = varargin{5}
-                            
-                            if(~isCombined)
-                                [~, ClusterSmoothTable{roiInc, c}, ~, classOut, ~, ~, ~, Result{roiInc, c}] = ...
-                                    DBSCANHandler(dataCropped(dataCropped(:,12) == chan, 5:6), dbscanParams, c, roiInc, ...
-                                    true, true, clusterColor, dataCropped(dataCropped(:,12) == chan, handles.NDataColumns + 2));
-                                
-                                handles.CellData{c}(whichPointsInROI & (handles.CellData{c}(:,12) == chan), handles.NDataColumns + 3) = classOut;
-                                
-                                handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 9) = 0;
-                            
+                            if(numel(handles.DBSCAN(chan).Channels) == 1)
+                                ch = channels(1);
+                                dataToProcess = dataCropped(dataCropped(:,12) == ch, 5:6);
+                                maskVector = dataCropped(dataCropped(:,12) == ch, handles.NDataColumns + 2);
                             else
-                                [~, ClusterSmoothTable{roiInc, c}, ~, classOut, ~, ~, ~, Result{roiInc, c}] = ...
-                                    DBSCANHandler(dataCropped(:, 5:6), dbscanParams, c, roiInc, ...
-                                    true, true, clusterColor, dataCropped(:, handles.NDataColumns + 2));
-                                
-                                %Check INOUT.md for details
-                                handles.CellData{c}(whichPointsInROI, handles.NDataColumns + 9) = classOut;
+                                ch1 = channels(1); ch2 = channels(2);
+                                dataToProcess = [dataCropped(dataCropped(:,12) == ch1, 5:6); dataCropped(dataCropped(:,12) == ch2, 5:6)];
+                                maskVector = [dataCropped(dataCropped(:,12) == ch1, handles.NDataColumns + 2); dataCropped(dataCropped(:,12) == ch2, handles.NDataColumns + 2)];
+                            end
+                            
+                            [~, ClusterSmoothTable{roiInc, c}, ~, classOut, ~, ~, ~, Result{roiInc, c}] = ...
+                                    DBSCANHandler(dataToProcess, dbscanParams, c, roiInc, ...
+                                    true, true, clusterColor, maskVector);
+                                     
+                            if(numel(handles.DBSCAN(chan).Channels) == 1)
+                                handles.CellData{c}(whichPointsInROI & (handles.CellData{c}(:,12) == chan), handles.NDataColumns + 3) = classOut;
+                                %handles.CellData{handles.CurrentCellData}(whichPointsInROI, handles.NDataColumns + 9) = 0;
+                            else
+                                ch1 = channels(1); ch2 = channels(2);
+                                pairIndex = handles.CellData{handles.CurrentCellData}(:,12) == ch1 | handles.CellData{handles.CurrentCellData}(:,12) == ch2;
+                                handles.CellData{handles.CurrentCellData}(whichPointsInROI & pairIndex, handles.DBSCAN(chan).ClusterIDIndex) = classOut;
                             end
                             
                             % Result is stats per ROI
@@ -1996,9 +2013,12 @@ function RunDBSCAN(~, ~, ~)
                         
                     end % ROI
                 end % Cell
+                
+                UpdateStatusBar(handles, 'Saving DBSCAN results...');
+                drawnow;
 
                 if ~all(cellfun(@isempty, Result))
-                    ExportDBSCANDataToExcelFiles(cellROIPair, Result, strcat(handles.Outputfolder, sprintf('%sDBSCAN Results', filesep)), chan, isCombined);
+                    ExportDBSCANDataToExcelFiles(cellROIPair, Result, strcat(handles.Outputfolder, sprintf('%sDBSCAN Results', filesep)), chan, dirname);
                 else
                     fprintf(1, 'All cells and ROIs empty.  Skipping export.\n');
                 end

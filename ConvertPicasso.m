@@ -20,8 +20,8 @@ function DoCGUIInitialize(varargin)
         handles = guidata(figObj);
         fig1 = figObj;
     else
-        WIDTH = 700;
-        HEIGHT = 400;
+        WIDTH = 800;
+        HEIGHT = 500;
         ss = get(0,'screensize');
         left = (ss(3) - WIDTH) / 2;
         bottom = (ss(4) - HEIGHT) / 2;
@@ -37,42 +37,66 @@ function DoCGUIInitialize(varargin)
     fprintf('GUI version %s\n', settings.Version);
     
     % controls
+    vpos = 0.9;
+    vdelta = 0.1;
+    % channel 1
     handles.handles.hLoadCh1 =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Load channel 1',...
-        'Position', [0.01    0.86    0.1500    0.08],...
-        'Callback', @LoadChannel1);
+        'Position', [0.01    vpos    0.1500    0.05], 'Callback', @LoadChannel1, 'Enable', 'on');
 
     handles.handles.hCh1Text = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
-        'Position',[0.200    0.86    0.75    0.07], 'BackgroundColor', [1 1 1], ...
-        'String', '(channel 1 file)', 'HorizontalAlignment','left');
+        'Position',[0.200    vpos    0.75    0.06], 'BackgroundColor', [1 1 1], ...
+        'String', '(empty)', 'HorizontalAlignment','left');
     
+    % channel 2
+    vpos = vpos - vdelta;
     handles.handles.hLoadCh2 =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Load channel 2',...
-        'Position', [0.01    0.71    0.1500    0.08],...
-        'Callback', @LoadChannel2);
+        'Position', [0.01    vpos   0.1500    0.05], 'Callback', @LoadChannel2, 'Enable', 'off');
 
     handles.handles.hCh2Text = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
-        'Position',[0.200    0.71    0.75    0.07], 'BackgroundColor', [1 1 1], ...
-        'String', '(channel 2 file)', 'HorizontalAlignment','left');
+        'Position',[0.200    vpos    0.75    0.06], 'BackgroundColor', [1 1 1], ...
+        'String', '(empty)', 'HorizontalAlignment','left');
     
+    % channel 3
+    vpos = vpos - vdelta;
+    handles.handles.hLoadCh3 =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Load channel 3',...
+        'Position', [0.01    vpos   0.1500    0.05], 'Callback', @LoadChannel3, 'Enable', 'off');
+
+    handles.handles.hCh3Text = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
+        'Position',[0.200    vpos    0.75    0.06], 'BackgroundColor', [1 1 1], ...
+        'String', '(empty)', 'HorizontalAlignment','left');
+    
+    % channel 4
+    vpos = vpos - vdelta;
+    handles.handles.hLoadCh4 =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Load channel 4',...
+        'Position', [0.01    vpos   0.1500    0.05], 'Callback', @LoadChannel4, 'Enable', 'off');
+
+    handles.handles.hCh4Text = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
+        'Position',[0.200    vpos    0.75    0.06], 'BackgroundColor', [1 1 1], ...
+        'String', '(empty)', 'HorizontalAlignment','left');
+    
+    vpos = vpos - 1.5*vdelta;
     handles.handles.hPixelSizeText = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
-        'Position',[0.02    0.53    0.2    0.07], 'BackgroundColor', [1 1 1], ...
+        'Position',[0.02    vpos    0.2    0.05], 'BackgroundColor', [1 1 1], ...
         'String', 'Pixel size (nm): ', 'HorizontalAlignment','left');
     
     handles.handles.hPixelSizeEdit = uicontrol(fig1, 'Style', 'edit', 'Units', 'normalized', ...
-        'Position',[0.2    0.55    0.2    0.07], 'BackgroundColor', [1 1 1], ...
+        'Position',[0.2    vpos+0.01    0.15    0.05], 'BackgroundColor', [1 1 1], ...
         'String', '65');
     
+    vpos = vpos - 2*vdelta;
     handles.handles.hConvert =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'CONVERT',...
-        'Position', [0.01    0.3    0.2    0.1],...
+        'Position', [0.01    vpos    0.2    0.1],...
         'Callback', @Convert);
     
     handles.handles.hStatus = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
-        'Position',[0.02    0.15    0.8    0.07], 'BackgroundColor', [1 1 1], ...
+        'Position',[0.02    0.12    0.8    0.07], 'BackgroundColor', [1 1 1], ...
         'String', '(status)', 'HorizontalAlignment','left');
     
     
     set(handles.handles.hConvert, 'enable', 'off');
-    handles.filechan1 = [];
-    handles.filechan2 = [];
+    handles.files = cell(4, 1);
+    handles.numChannels = 0;
+    handles.currDir = '';
     
     guidata(handles.handles.MainFig, handles);
 
@@ -116,30 +140,56 @@ function settings = LoadSettings()
 end
 
 
-function LoadChannel1(~, ~, ~)
+function LoadChannel(ch)
     handles = guidata(findobj('Tag', 'CONVERT GUI'));
-    [fileName, pathName] = uigetfile({'*.hdf5', 'Picasso export file'}, 'Select first channel hdf5 file', 'MultiSelect', 'off');
-    handles.filechan1 = fullfile(pathName, fileName);
-    set(handles.handles.hCh1Text, 'String', fullfile(pathName, fileName));
+    if(ch == 1)
+        [fileName, pathName] = uigetfile({'*.hdf5', 'Picasso export file'}, 'Select first channel hdf5 file', 'MultiSelect', 'off');
+    else
+        [fileName, pathName] = uigetfile({'*.hdf5', 'Picasso export file'}, 'Select first channel hdf5 file', 'MultiSelect', 'off', handles.currDir);
+    end
+    if fileName==0
+        return;
+    end
     
-    if(~isempty(handles.filechan2))
+    fullFilename = fullfile(pathName, fileName);
+    handles.files{ch} = fullFilename;
+    handles.currDir = pathName;
+    handles.numChannels = max(handles.numChannels, ch);
+    
+    if(ch == 1)
+        set(handles.handles.hCh1Text, 'String', fullFilename);
+        set(handles.handles.hLoadCh2, 'Enable', 'on');
+    elseif(ch == 2)
+        set(handles.handles.hCh2Text, 'String', fullFilename);
+        set(handles.handles.hLoadCh3, 'Enable', 'on');
+    elseif(ch == 3)
+        set(handles.handles.hCh3Text, 'String', fullFilename);
+        set(handles.handles.hLoadCh4, 'Enable', 'on');
+    elseif(ch == 4)
+        set(handles.handles.hCh4Text, 'String', fullFilename);
+    end
+    
+    if(ch > 1)
         set(handles.handles.hConvert, 'enable', 'on');
     end
     
     guidata(handles.handles.MainFig, handles);
 end
 
+function LoadChannel1(~, ~, ~)
+    LoadChannel(1);
+end
+
 function LoadChannel2(~, ~, ~)
-    handles = guidata(findobj('Tag', 'CONVERT GUI'));
-    [fileName, pathName] = uigetfile({'*.hdf5', 'Picasso export file'}, 'Select second channel hdf5 file', 'MultiSelect', 'off');
-    handles.filechan2 = fullfile(pathName, fileName);
-    set(handles.handles.hCh2Text, 'String', fullfile(pathName, fileName));
-    
-    if(~isempty(handles.filechan1))
-        set(handles.handles.hConvert, 'enable', 'on');
-    end
-    
-    guidata(handles.handles.MainFig, handles);
+    LoadChannel(2);
+end
+
+function LoadChannel3(~, ~, ~)
+    LoadChannel(3);
+end
+
+function LoadChannel4(~, ~, ~)
+    LoadChannel(4);
 end
 
 function Convert(~, ~, ~)
@@ -163,72 +213,44 @@ function Convert(~, ~, ~)
         end
         fprintf(f, '%s\n', header{13});
         
-        % first channel
-        set(handles.handles.hStatus, 'String', 'Converting first channel...');
-        drawnow;
-    
-        locs = h5read(handles.filechan1, '/locs');
-        numrows = numel(locs.frame);
         % now convert data 
         % ref (_csv2hdf):
         % https://github.com/jungmannlab/picasso/blob/master/picasso/__main__.py 
-        for row = 1:numrows
-            rowdata = zeros(1, 13);
-            rowdata(1) = row;                       % index
-            rowdata(2) = locs.frame(row) + 1;       % first frame
-            rowdata(3) = 1;                         % number frames
-            rowdata(4) = 0;                         % frames missing
-            rowdata(5) = locs.x(row) * pixelsize;   % x_nm
-            rowdata(6) = locs.y(row) * pixelsize;   % y_nm
-            rowdata(7) = locs.lpx(row) * pixelsize; % precision
-            rowdata(8) = locs.photons(row);         % number photons
-            rowdata(9) = locs.bg(row);              % background variance
-            rowdata(10) = locs.ellipticity(row);    % chi square. need double check. is it important?
-            rowdata(11) = locs.sx(row) * pixelsize; % PSF half width. need double check
-            rowdata(12) = 1;                        % channel
-            rowdata(13) = 1;                        % z slice
+        for cc = 1:handles.numChannels
+            set(handles.handles.hStatus, 'String', sprintf('Converting channel %d ...', cc));
+            drawnow;
             
-            for ii=1:4
-                fprintf(f, '%d\t', rowdata(ii));
-            end
-            for ii=5:11
-                fprintf(f, '%0.1f\t', rowdata(ii));
-            end
-            fprintf(f, '%d\t', rowdata(12));
-            fprintf(f, '%d\n', rowdata(13)); 
-        end
-        
-        % second channel
-        set(handles.handles.hStatus, 'String', 'Converting second channel...');
-        drawnow;
-        
-        locs = h5read(handles.filechan2, '/locs');
-        numrows = numel(locs.frame);
-        for row = 1:numrows
-            rowdata = zeros(1, 13);
-            rowdata(1) = row;                       % index
-            rowdata(2) = locs.frame(row) + 1;       % first frame
-            rowdata(3) = 1;                         % number frames
-            rowdata(4) = 0;                         % frames missing
-            rowdata(5) = locs.x(row) * pixelsize;   % x_nm
-            rowdata(6) = locs.y(row) * pixelsize;   % y_nm
-            rowdata(7) = locs.lpx(row) * pixelsize; % precision
-            rowdata(8) = locs.photons(row);         % number photons
-            rowdata(9) = locs.bg(row);              % background variance
-            rowdata(10) = locs.ellipticity(row);    % chi square. need double check. is it important?
-            rowdata(11) = locs.sx(row) * pixelsize; % PSF half width. need double check
-            rowdata(12) = 2;                        % channel
-            rowdata(13) = 1;                        % z slice
+            locs = h5read(handles.files{cc}, '/locs');
+            numrows = numel(locs.frame);
             
-            for ii=1:4
-                fprintf(f, '%d\t', rowdata(ii));
+            for row = 1:numrows
+                rowdata = zeros(1, 13);
+                rowdata(1) = row;                       % index
+                rowdata(2) = locs.frame(row) + 1;       % first frame
+                rowdata(3) = 1;                         % number frames
+                rowdata(4) = 0;                         % frames missing
+                rowdata(5) = locs.x(row) * pixelsize;   % x_nm
+                rowdata(6) = locs.y(row) * pixelsize;   % y_nm
+                rowdata(7) = locs.lpx(row) * pixelsize; % precision
+                rowdata(8) = locs.photons(row);         % number photons
+                rowdata(9) = locs.bg(row);              % background variance
+                if isfield(locs, 'ellipticity')
+                    rowdata(10) = locs.ellipticity(row);    % chi square. need double check. is it important?
+                end
+                rowdata(11) = locs.sx(row) * pixelsize; % PSF half width. need double check
+                rowdata(12) = cc;                       % channel
+                rowdata(13) = 1;                        % z slice
+
+                for ii=1:4
+                    fprintf(f, '%d\t', rowdata(ii));
+                end
+                for ii=5:11
+                    fprintf(f, '%0.1f\t', rowdata(ii));
+                end
+                fprintf(f, '%d\t', rowdata(12));
+                fprintf(f, '%d\n', rowdata(13)); 
             end
-            for ii=5:11
-                fprintf(f, '%0.1f\t', rowdata(ii));
-            end
-            fprintf(f, '%d\t', rowdata(12));
-            fprintf(f, '%d\n', rowdata(13)); 
-        end
+        end     
         
         fclose(f);
         
@@ -242,6 +264,5 @@ function Convert(~, ~, ~)
     
     set(handles.handles.hConvert, 'enable', 'on');
     set(handles.handles.MainFig, 'pointer', 'arrow');
-    
     
 end

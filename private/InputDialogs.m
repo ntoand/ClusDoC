@@ -8,13 +8,14 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
     handles.CONST.DEFAULT_ROI_SIZE = 4000;
     handles.CONST.PROCESS_SEPARATE = 1;
     handles.CONST.PROCESS_COMBINED = 2;
+    handles.CONST.PROCESS_BOTH = 3;
     handles.CONST.POC_TYPE1 = 1;    % poc = sumA / sumB
     handles.CONST.POC_TYPE2 = 2;    % poc = sumA / (sumA + sumB)
 
     handles.Nchannels = 2;
 
     handles.ProcessType = handles.CONST.PROCESS_SEPARATE;
-    for k = 1:3
+    for k = 1:10
         handles.DBSCAN(k).Epsilon = 20;
         handles.DBSCAN(k).MinPts = 3;
         handles.DBSCAN(k).UseLr_rThresh = true;
@@ -27,6 +28,12 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         handles.DBSCAN(k).ContourMethod = 1; % 1: smoothing, 2: alphaShape
         handles.DBSCAN(k).SmoothingRad = 15;
     end
+    
+    % Default RipleyK settings
+    handles.RipleyK.Start = 0;
+    handles.RipleyK.End = 1000;
+    handles.RipleyK.Step = 10;
+    handles.RipleyK.MaxSampledPts = 1e4;
     
     % Default DoC parameters
     handles.DoC.Lr_rRad = 20;
@@ -42,8 +49,11 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
     handles.PoC.ColoThres = 0.4;
     handles.PoC.NbThresh = 10;
     
-    [handles, ~] = setPoCParameters(handles);
+    handles.DBSCAN_channels = {'Ch1', 'Ch2', 'Ch3'};
+    
+    [handles, ~] = setRipleyParameters(handles);
     %}
+    % end for quick debug
     
     if strcmp(name, 'ripley')
         [handles, returnVal] = setRipleyParameters(handles);
@@ -56,7 +66,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
     elseif strcmp(name, 'settings')
         [handles, returnVal] = setSettings(handles);
     end
-    
+ 
     
     
     % RIPLEY parameters
@@ -158,17 +168,12 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
     % Pop-up window to set DBSCAN parameters
     function [handles, returnVal] = setDBSCANParameters(handles, withstats)
 
-        isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
-      
         handles.handles.DBSCANSettingsFig = figure();
         set(handles.handles.DBSCANSettingsFig, 'Tag', 'DBSCANSettingsFig');
         WIDTH = 260;
-        if(~isCombined)
-            HEIGHT = 340;
-        else
-            HEIGHT = 320;
-        end
+        HEIGHT = 340;
         HSPACE = 25;
+        currChan = 1;
         
         resizeFig(handles.handles.DBSCANSettingsFig, [WIDTH HEIGHT]);
         set(handles.handles.DBSCANSettingsFig, 'toolbar', 'none', 'menubar', 'none', ...
@@ -176,8 +181,10 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
 
         
         str = 'DBSCAN Parameters for channels';
-        if(isCombined)
-            str = 'DBSCAN Parameters for combined data';
+        if (handles.ProcessType == handles.CONST.PROCESS_COMBINED)
+            str = 'DBSCAN Parameters for combined pairs';
+        elseif (handles.ProcessType == handles.CONST.PROCESS_BOTH)
+            str = 'DBSCAN Parameters for both (channels + pairs)';
         end
         
         ypos = HEIGHT - HSPACE;
@@ -186,51 +193,9 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 250 20], 'horizontalalignment', 'center', 'Fontsize', 10);
 
         %%%%%%
-        if(~isCombined)
-            ypos = ypos - 40;
-        else
-            ypos = ypos - 10;
-        end
-        if verLessThan('matlab', '8.4')
-            handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.2 ypos/HEIGHT .6 .09],...
-                'SelectionChangeFcn', @changeDBSCANChannel);
-        else
-            handles.handles.DBSCANChannelToggle = uibuttongroup('Visible', 'on', 'Position',[.2 ypos/HEIGHT .6 .09],...
-                'SelectionChangedFcn', @changeDBSCANChannel);
-        end
-
-        handles.handles.DBSCANChannelSelect(1) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-            'Style', 'radiobutton', 'String', 'Ch 1', 'position', [15 4 50 20]);
-
-        handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-            'Style', 'radiobutton', 'String', 'Ch 2', 'position', [90 4 50 20]);
-
-        if verLessThan('matlab', '8.4')     
-            if handles.Nchannels > 1
-                set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');     
-            else  
-                set(handles.handles.DBSCANChannelToggle, 'Visible', 'on');
-                set(handles.handles.DBSCANChannelSelect(2), 'Enable', 'off');
-            end
-        else
-            if handles.Nchannels > 1
-                handles.handles.DBSCANChannelToggle.Visible = 'on';
-            else
-                handles.handles.DBSCANChannelToggle.Visible = 'on';
-                handles.handles.DBSCANChannelSelect(2).Enable = 'off';
-            end  
-        end
-
-        ch = 1;
-        if(isCombined)
-            ch = 3;
-            if verLessThan('matlab', '8.4')
-                set(handles.handles.DBSCANChannelToggle, 'Visible', 'off'); 
-            else
-                handles.handles.DBSCANChannelToggle.Visible = 'off';
-            end 
-        end
-
+        ypos = ypos - 40;
+        handles.handles.DBSCANChannelsPopup = uicontrol('Style', 'popup', 'String', handles.DBSCAN_channels,...
+            'Position', [20 ypos WIDTH-40 20],'Callback', @changeDBSCANChannel);
 
         %%%%%%
         ypos = ypos - 35;
@@ -239,7 +204,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 120 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANSettingsEdit(1) = uicontrol('Style', 'edit', ...
-            'String', num2str(handles.DBSCAN(ch).Epsilon), 'parent', handles.handles.DBSCANSettingsFig,...
+            'String', num2str(handles.DBSCAN(currChan).Epsilon), 'parent', handles.handles.DBSCANSettingsFig,...
             'Position', [125 ypos 60 20]);
 
         ypos = ypos - HSPACE;
@@ -248,7 +213,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 120 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANSettingsEdit(2) = uicontrol('Style', 'edit', ...
-            'String', num2str(handles.DBSCAN(ch).MinPts), 'parent', handles.handles.DBSCANSettingsFig,...
+            'String', num2str(handles.DBSCAN(currChan).MinPts), 'parent', handles.handles.DBSCANSettingsFig,...
             'Position', [125 ypos 60 20]);
 
         ypos = ypos - HSPACE;
@@ -257,7 +222,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 120 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANSettingsEdit(3) = uicontrol('Style', 'edit', ...
-            'String', num2str(handles.DBSCAN(ch).Cutoff), 'parent', handles.handles.DBSCANSettingsFig,...
+            'String', num2str(handles.DBSCAN(currChan).Cutoff), 'parent', handles.handles.DBSCANSettingsFig,...
             'Position', [125 ypos 60 20]);
 
         ypos = ypos - HSPACE;
@@ -266,7 +231,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 120 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANSettingsEdit(4) = uicontrol('Style', 'edit', ...
-            'String', num2str(handles.DBSCAN(ch).Threads), 'parent', handles.handles.DBSCANSettingsFig,...
+            'String', num2str(handles.DBSCAN(currChan).Threads), 'parent', handles.handles.DBSCANSettingsFig,...
             'Position', [125 ypos 60 20]);
 
         ypos = ypos - HSPACE;
@@ -275,7 +240,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 120 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANSettingsEdit(5) = uicontrol('Style', 'edit', ...
-            'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad), 'parent', handles.handles.DBSCANSettingsFig,...
+            'String', num2str(handles.DBSCAN(currChan).Lr_rThreshRad), 'parent', handles.handles.DBSCANSettingsFig,...
             'Position', [125 ypos 60 20]);
 
         handles.handles.DBSCANSettingsText(6) = uicontrol('Style', 'text', ...
@@ -283,7 +248,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [190 ypos 30 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANSetToggle = uicontrol('Style', 'checkbox', ...
-            'Value', handles.DBSCAN(ch).UseLr_rThresh, 'position', [225 ypos 20 20], ...
+            'Value', handles.DBSCAN(currChan).UseLr_rThresh, 'position', [225 ypos 20 20], ...
             'callback', @DBSCANUseThreshold);
 
         ypos = ypos - HSPACE;
@@ -292,7 +257,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 120 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANDoStatsToggle = uicontrol('Style', 'checkbox', ...
-            'Value', handles.DBSCAN(ch).DoStats, 'position', [125 ypos 20 20]);
+            'Value', handles.DBSCAN(currChan).DoStats, 'position', [125 ypos 20 20]);
         
         % plot options
         ypos = ypos - HSPACE;
@@ -301,7 +266,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 120 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANColorClustersToggle = uicontrol('Style', 'checkbox', ...
-            'Value', handles.DBSCAN(ch).ColorForClusters, 'position', [125 ypos 20 20]);
+            'Value', handles.DBSCAN(currChan).ColorForClusters, 'position', [125 ypos 20 20]);
         
         ypos = ypos - HSPACE;
         handles.handles.DBSCANSettingsText(8) = uicontrol('Style', 'text', ...
@@ -317,7 +282,7 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 120 20], 'horizontalalignment', 'right');
         
         handles.handles.DBSCANSettingsEdit(6) = uicontrol('Style', 'edit', ...
-            'String', num2str(handles.DBSCAN(ch).SmoothingRad), 'parent', handles.handles.DBSCANSettingsFig,...
+            'String', num2str(handles.DBSCAN(currChan).SmoothingRad), 'parent', handles.handles.DBSCANSettingsFig,...
             'Position', [125 ypos 60 20]);
            
         % event
@@ -328,8 +293,8 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             set(handles.handles.DBSCANDoStatsToggle, 'Enable', 'off');
         end
         
-        if(handles.DBSCAN(ch).ContourMethod == 2)
-            set(handles.handles.DBSCANContourPopup, 'Value', handles.DBSCAN(ch).ContourMethod);
+        if(handles.DBSCAN(currChan).ContourMethod == 2)
+            set(handles.handles.DBSCANContourPopup, 'Value', handles.DBSCAN(currChan).ContourMethod);
             set(handles.handles.DBSCANSettingsEdit(6), 'enable', 'off');
         end
 
@@ -377,15 +342,8 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
 
         function changeDBSCANChannel(varargin)
 
-            changeToValue = (varargin{2}.NewValue);
-
-            if strcmp(changeToValue.String, 'Ch 1')
-                ch = 1;
-                oldCh = 2;
-            elseif strcmp(changeToValue.String, 'Ch 2')
-                ch = 2;
-                oldCh = 1;
-            end
+            oldCh = currChan;
+            currChan = varargin{2}.Source.Value;
 
             handles.DBSCAN(oldCh).Epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
             handles.DBSCAN(oldCh).MinPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
@@ -398,18 +356,18 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             handles.DBSCAN(oldCh).ColorForClusters = get(handles.handles.DBSCANColorClustersToggle, 'value') == 1;
             handles.DBSCAN(oldCh).ContourMethod = get(handles.handles.DBSCANContourPopup, 'value');
 
-    %         disp(handles.DBSCAN(oldCh));
+            %disp(handles.DBSCAN(oldCh));
 
-            set(handles.handles.DBSCANSettingsEdit(1), 'String', num2str(handles.DBSCAN(ch).Epsilon));
-            set(handles.handles.DBSCANSettingsEdit(2), 'String', num2str(handles.DBSCAN(ch).MinPts));
-            set(handles.handles.DBSCANSettingsEdit(3), 'String', num2str(handles.DBSCAN(ch).Cutoff));
-            set(handles.handles.DBSCANSettingsEdit(4), 'String', num2str(handles.DBSCAN(ch).Threads));
-            set(handles.handles.DBSCANSettingsEdit(5), 'String', num2str(handles.DBSCAN(ch).Lr_rThreshRad));
-            set(handles.handles.DBSCANSettingsEdit(6), 'String', num2str(handles.DBSCAN(ch).SmoothingRad));       
-            set(handles.handles.DBSCANSetToggle, 'Value', handles.DBSCAN(ch).UseLr_rThresh);
-            set(handles.handles.DBSCANDoStatsToggle, 'Value', handles.DBSCAN(ch).DoStats);
-            set(handles.handles.DBSCANColorClustersToggle, 'Value', handles.DBSCAN(ch).ColorForClusters);
-            set(handles.handles.DBSCANContourPopup, 'Value', handles.DBSCAN(ch).ContourMethod);
+            set(handles.handles.DBSCANSettingsEdit(1), 'String', num2str(handles.DBSCAN(currChan).Epsilon));
+            set(handles.handles.DBSCANSettingsEdit(2), 'String', num2str(handles.DBSCAN(currChan).MinPts));
+            set(handles.handles.DBSCANSettingsEdit(3), 'String', num2str(handles.DBSCAN(currChan).Cutoff));
+            set(handles.handles.DBSCANSettingsEdit(4), 'String', num2str(handles.DBSCAN(currChan).Threads));
+            set(handles.handles.DBSCANSettingsEdit(5), 'String', num2str(handles.DBSCAN(currChan).Lr_rThreshRad));
+            set(handles.handles.DBSCANSettingsEdit(6), 'String', num2str(handles.DBSCAN(currChan).SmoothingRad));       
+            set(handles.handles.DBSCANSetToggle, 'Value', handles.DBSCAN(currChan).UseLr_rThresh);
+            set(handles.handles.DBSCANDoStatsToggle, 'Value', handles.DBSCAN(currChan).DoStats);
+            set(handles.handles.DBSCANColorClustersToggle, 'Value', handles.DBSCAN(currChan).ColorForClusters);
+            set(handles.handles.DBSCANContourPopup, 'Value', handles.DBSCAN(currChan).ContourMethod);
             
             if(get(handles.handles.DBSCANContourPopup, 'Value') == 1)
                 set(handles.handles.DBSCANSettingsEdit(6), 'enable', 'on');
@@ -431,16 +389,16 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         function DBSCANSetAndContinue(varargin)
 
             % Collect inputs and set parameters in guidata
-            handles.DBSCAN(ch).Epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
-            handles.DBSCAN(ch).MinPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
-            handles.DBSCAN(ch).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
-            handles.DBSCAN(ch).Threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
-            handles.DBSCAN(ch).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
-            handles.DBSCAN(ch).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
-            handles.DBSCAN(ch).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
-            handles.DBSCAN(ch).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
-            handles.DBSCAN(ch).ColorForClusters = get(handles.handles.DBSCANColorClustersToggle, 'value') == 1;
-            handles.DBSCAN(ch).ContourMethod = get(handles.handles.DBSCANContourPopup, 'value');
+            handles.DBSCAN(currChan).Epsilon = str2double(get(handles.handles.DBSCANSettingsEdit(1),'string'));
+            handles.DBSCAN(currChan).MinPts = str2double(get(handles.handles.DBSCANSettingsEdit(2),'string'));
+            handles.DBSCAN(currChan).Cutoff = str2double(get(handles.handles.DBSCANSettingsEdit(3),'string'));
+            handles.DBSCAN(currChan).Threads = str2double(get(handles.handles.DBSCANSettingsEdit(4),'string'));
+            handles.DBSCAN(currChan).Lr_rThreshRad = str2double(get(handles.handles.DBSCANSettingsEdit(5),'string'));
+            handles.DBSCAN(currChan).SmoothingRad = str2double(get(handles.handles.DBSCANSettingsEdit(6),'string'));
+            handles.DBSCAN(currChan).UseLr_rThresh = (get(handles.handles.DBSCANSetToggle, 'value')) == get(handles.handles.DBSCANSetToggle, 'Max');
+            handles.DBSCAN(currChan).DoStats = (get(handles.handles.DBSCANDoStatsToggle, 'value')) == get(handles.handles.DBSCANDoStatsToggle, 'Max');
+            handles.DBSCAN(currChan).ColorForClusters = get(handles.handles.DBSCANColorClustersToggle, 'value') == 1;
+            handles.DBSCAN(currChan).ContourMethod = get(handles.handles.DBSCANContourPopup, 'value');
 
             returnVal = 1;
             uiresume;

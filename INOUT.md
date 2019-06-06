@@ -36,10 +36,10 @@ Added columns in output files (version 1.0.0, without combined data processing)
 - N+6				LrAboveThreshold
 - N+8				AllChanDensity
 
-Some columns are added to store results for combined data (avoiding conflicting with results of channel 1 or 2)
+Some columns are added to store results for combined data (version 1.4.0, avoiding conflicting with results of channel 1 or 2) 
 
-- N+9				CombinedClusterID
-- N+10				PoCScore
+- N+9				PoCScore
+- From N+10			CombinedClusterID (for pairs Ch1_Ch2, Ch1_Ch3, ...)
 
 
 ## Cluster output table (DBSCAN)

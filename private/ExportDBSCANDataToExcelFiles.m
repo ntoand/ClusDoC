@@ -1,4 +1,4 @@
-function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan, isCombined)
+function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan, dirname)
 
     % Formerly Final_Result_DBSCAN_GUIV2
     % Extracts and exports Results table into Excel format
@@ -30,14 +30,8 @@ function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan, i
     try 
         
         disp('Export')
-        disp(chan);
-        
-        if(isCombined)
-            dirname = 'Combined';
-        else
-            dirname = sprintf('Ch%d', chan);
-        end
-
+        disp(chan); 
+       
         if ispc
             xlswrite(fullfile(outputFolder, 'DBSCAN Results.xls'), cellROIPair, dirname, 'A2');
             xlswrite(fullfile(outputFolder, 'DBSCAN Results.xls'), HeaderArray, dirname, 'A1');
@@ -55,11 +49,7 @@ function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan, i
         assignin('base', 'Matrix_Result', Matrix_Result);
         
         matOut = [cellROIPair, nan(size(cellROIPair, 1), 1), Matrix_Result];
-        if(isCombined)
-            fID = fopen(fullfile(outputFolder, 'DBSCAN Results Combined.txt'), 'w+');
-        else
-            fID = fopen(fullfile(outputFolder, sprintf('DBSCAN Results Chan%d.txt', chan)), 'w+');
-        end
+        fID = fopen(fullfile(outputFolder, sprintf('DBSCAN Results %s.txt', dirname)), 'w+');
         fprintf(fID, strcat(repmat('%s\t', 1, length(HeaderArray)-1), '%s\r\n'), HeaderArray{:});
         
         fmtString = strcat(repmat('%f\t', 1, length(HeaderArray)-1), '%f\r\n');
