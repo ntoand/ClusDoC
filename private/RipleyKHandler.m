@@ -55,6 +55,9 @@ function valOut = RipleyKHandler(handles, Fun_OutputFolder_name)
 
                     for chan = 1:numChannels
                         plotColor = handles.ChanColors(chan, :);
+                        if(handles.ProcessType == handles.CONST.PROCESS_COMBINED)
+                            plotColor = handles.ChanColors(chan + numChannels, :);
+                        end
                         
                         if(numel(handles.Ripley_channels{chan}.Channels) == 1)
                             ch = handles.Ripley_channels{chan}.Channels(1);
