@@ -9,6 +9,12 @@ function [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHan
     % To pass test, there have to be at least DBSCANParams.MinPts points
     % that are within DBSCANParams.Epsilon distance from other points.  
     
+    % is combined data (pair of channels)
+    isCombined = size(Data, 2) == 3;
+    if(isCombined)
+        channels = unique(Data(:, 3));
+    end
+    
     % !!!Cannot check for big dataset due to memory issue
     if(size(Data, 1) < 10000)
         UpdateMainStatusBar('Checking if clustering is even possible on this dataset...');
@@ -26,8 +32,7 @@ function [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHan
     
     if ~checkClusterTest
         % No chance of a cluster.  MEX code is going to throw a fault.
-        % Skip this ROI.
-        
+        % Skip this ROI.       
         datathr = Data;
         classOut = zeros(size(Data, 1), 1);
         class = [];
@@ -39,7 +44,7 @@ function [datathr, ClusterSmooth, SumofContour, classOut, varargout] = DBSCANHan
         varargout{4} = [];
         return
     end
-
+    
 try 
 
     %   Data = Zen format
@@ -146,11 +151,17 @@ try
 
             dataThreshVector = unique(cell2mat(idx(data(:,3) > Lr_Threshold)'));
             datathr = data(dataThreshVector, :);
+            if (isCombined)
+                datathrChannels = Data(dataThreshVector, 3);
+            end
 
             Density = datathr(:,6);
         else
             dataThreshVector = true(size(Data, 1), 1);
             datathr = Data(dataThreshVector, 1:2);
+            if (isCombined)
+                datathrChannels = Data(dataThreshVector, 3);
+            end
         end
         
         if nargout == 9
@@ -188,6 +199,9 @@ try
             %save(name, 'class', 'datathr');
             
             MaxClass = max(class);
+            if (isCombined)
+                cocluster = zeros(MaxClass, 7);
+            end
             
             if(DBSCANParams.ColorForClusters)
                 colors = distinguishable_colors(MaxClass);
@@ -201,21 +215,37 @@ try
                 end
                 
                 xin = datathr(class == i,:); % Positions contained in the cluster i
+                if(isCombined)
+                    cin = datathrChannels(class ==i, :);
+                end
                 
                 if display1 || ~printOutFig
-                    if(DBSCANParams.ColorForClusters)
-                        ccolor = colors(i, :);
+                    if(isCombined)
+                        xin1 = xin(cin == channels(1), :);
+                        xin2 = xin(cin == channels(2), :);
+                        plot(ax1,xin1(:,1), xin1(:,2),'Marker', '.', 'MarkerSize', 5,'LineStyle', 'none', 'color', [0, 1, 0]);
+                        plot(ax1,xin2(:,1), xin2(:,2),'Marker', '.', 'MarkerSize', 5,'LineStyle', 'none', 'color', [0, 0, 1]);
                     else
-                        ccolor = clusterColor;
+                        if(DBSCANParams.ColorForClusters)
+                            ccolor = colors(i, :);
+                        else
+                            ccolor = clusterColor;
+                        end
+                        plot(ax1,xin(:,1), xin(:,2),'Marker', '.', 'MarkerSize', 5,'LineStyle', 'none', 'color', ccolor);
                     end
-                    plot(ax1,xin(:,1), xin(:,2),'Marker', '.', 'MarkerSize', 5,'LineStyle', 'none', 'color', ccolor);
+                    
                 end   
 
                 [dataT, idxT, DisT, Density20 ] = Lr_fun(xin(:,1), xin(:,2), xin(:,1), xin(:,2) , 20, SizeROI); % Included in FunDBSCAN4DoC_GUIV2
                                                                                                                     % Unsure how this is carried forward
 
                 [ClusImage,  Area, Circularity, Nb, contour, edges, Cutoff_point] = Smoothing_fun4cluster(xin(:,1:2), DBSCANParams, false, false); % 0.1*max intensity 
-
+                
+                if (isCombined)
+                    n = size(xin, 1);
+                    n1 = size(cin(cin == channels(1)), 1); n2 = size(cin(cin==channels(2)), 1);
+                    cocluster(i, :) = [i, n, n1, 100*(n1/n), n2, 100*(n2/n), size(contour, 1)];
+                end
                 
                 ClusterSmooth{i,1}.ClusterID = i;
                 ClusterSmooth{i,1}.Points = xin(:,1:2);
@@ -330,13 +360,37 @@ try
                     end % contour method
                     
                 end % end display1
-
+    
             end
         end
         
         UpdateMainStatusBar('DBSCAN completed, now plotting...');
         
         ClusterSmooth = ClusterSmooth(~cellfun('isempty', ClusterSmooth));
+        
+        % save cocluster result
+        if (isCombined)
+            cocluster_csv = fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cocluster', 'cocluster.csv');
+            cHeader = {'ClassID' 'NumPoints' sprintf('NumPointsChan%d', channels(1)) sprintf('NumPointsChan%d_Percent', channels(1)) ...
+                        sprintf('NumPointsChan%d', channels(2)) sprintf('NumPointsChan%d_Percent', channels(2)) 'NumContourPoints'};
+            commaHeader = [cHeader;repmat({','},1,numel(cHeader))]; commaHeader = commaHeader(:)';
+            fid = fopen(cocluster_csv,'wt'); 
+            fprintf(fid,'%s\n', cell2mat(commaHeader));
+            fclose(fid);
+            %write data to end of file
+            dlmwrite(cocluster_csv, cocluster, '-append');
+
+            cocluster_plot = fullfile(DBSCANParams.Outputfolder, printOutFigDest, dirname, 'Cocluster', 'cocluster.tif');
+            figCo = figure();
+            clf(figCo);
+            axCo = axes('parent',figCo);
+            set(axCo, 'box', 'on','XTickLabel',[],'XTick',[],'YTickLabel',[],'YTick',[])
+            set(figCo, 'Color', [1 1 1], 'Tag', 'ClusDoC')
+            bar(axCo, 1:size(cocluster, 1), [cocluster(:, 4) cocluster(:, 6)], 'stacked');
+            xlabel('Clusters'); ylabel('Percentage');
+            save_plot(cocluster_plot, figCo, DBSCANParams.settings.AlsoSaveFig);
+            close(figCo);
+        end
 
         % Plot DBSCAN results
         Name = strcat('Cell', num2str(cellNum), '_Region', num2str(ROINum), 'Region_with_Cluster.tif');

@@ -1,7 +1,7 @@
 function ClusDoC(varargin)
     close all; % for easier debugging
     clear;
-    DEBUG = true;
+    DEBUG = false;
     if(DEBUG)
         addpath('dev'); % "ln -s private dev" to debug line by line in private funcs
     end
@@ -1942,6 +1942,9 @@ function RunDBSCAN(~, ~, ~)
                 CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname));
                 CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname, 'Cluster maps'));
                 CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname, 'Cluster density maps'));
+                if(numel(handles.DBSCAN(chan).Channels) > 1)
+                    CreateDir(fullfile(handles.Outputfolder, 'DBSCAN Results', dirname, 'Cocluster'));
+                end
                 
                 dbscanParams.CurrentChannel = chan;
                 clusterColor = handles.ChanColors(chan, :);
@@ -1977,7 +1980,8 @@ function RunDBSCAN(~, ~, ~)
                                 maskVector = dataCropped(dataCropped(:,12) == ch, handles.NDataColumns + 2);
                             else
                                 ch1 = channels(1); ch2 = channels(2);
-                                dataToProcess = [dataCropped(dataCropped(:,12) == ch1, 5:6); dataCropped(dataCropped(:,12) == ch2, 5:6)];
+                                dataToProcess = [[dataCropped(dataCropped(:,12) == ch1, 5:6) dataCropped(dataCropped(:,12) == ch1, 12)]; 
+                                                 [dataCropped(dataCropped(:,12) == ch2, 5:6) dataCropped(dataCropped(:,12) == ch2, 12)]];
                                 maskVector = [dataCropped(dataCropped(:,12) == ch1, handles.NDataColumns + 2); dataCropped(dataCropped(:,12) == ch2, handles.NDataColumns + 2)];
                             end
                             
