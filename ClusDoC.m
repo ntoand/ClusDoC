@@ -1588,7 +1588,7 @@ function RipleyKtest(~, ~, ~)
                 end
                 
                 if size(xCh, 1) > handles.RipleyK.MaxSampledPts
-                    fprintf('WARNING: reduce sample size');
+                    fprintf('WARNING: reduce sample size\n');
                     rKsubsample = randsample(1:size(xCh, 1), handles.RipleyK.MaxSampledPts);
                     xCh = xCh(rKsubsample, :);
                 end
@@ -1597,10 +1597,14 @@ function RipleyKtest(~, ~, ~)
                     handles.RipleyK.Start, handles.RipleyK.End, handles.RipleyK.Step, ...
                     handles.RipleyK.size_ROI);
                 % Plot
+                chanColor = handles.ChanColors(chan, :);
+                if(handles.ProcessType == handles.CONST.PROCESS_COMBINED)
+                    chanColor = handles.ChanColors(chan + numchannels, :);
+                end
                 handles.handles.RipleyKChFig(chan) = figure('Name', sprintf('Active ROI %s', Ripley_channels{chan}.Name), 'color', [1 1 1]); 
                 handles.handles.RipleyKChAx(chan) = axes('parent', handles.handles.RipleyKChFig(chan));
                 plot(handles.handles.RipleyKChAx(chan), handles.RipleyK.r(:,chan), handles.RipleyK.Lr_r(:,chan), ...
-                    'linewidth', 2, 'color', handles.ChanColors(chan, :));
+                    'linewidth', 2, 'color', chanColor);
                 set(handles.handles.RipleyKChAx(chan), 'NextPlot', 'add', 'fontsize', 12);
                 title_name = sprintf('%.0d points in %.0f x %.0f nm Area', size(xCh, 1), CurrentROI(3), CurrentROI(4));
                 title(title_name);
