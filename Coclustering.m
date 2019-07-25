@@ -84,8 +84,11 @@ for ii=1:input.NumChannels
         result2A{c1, 2*(curChan-1)+2} = []; % min distances
         for c2 = 1:numel(curClusters)
             D = pdist2(maskClusters{c1}.Points, curClusters{c2}.Points);
-            minD = min(D(:));
+            minD = min(D(:)); 
             if(minD <= input.Approach2a.OverlapDistance)
+                if minD < 10
+                    minD = 0;
+                end
                 result2A{c1, 2*(curChan-1)+1} = [result2A{c1, 2*(curChan-1)+1} c2];
                 result2A{c1, 2*(curChan-1)+2} = [result2A{c1, 2*(curChan-1)+2} minD];
             end
