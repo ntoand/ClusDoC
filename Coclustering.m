@@ -4,7 +4,7 @@
 
 close all
 clear
-DEBUG = true;
+DEBUG = false;
 
 %% Input and loading
 input = {};
@@ -13,7 +13,7 @@ input.NumChannels = 3;
 input.ShowFigures = true;
 % Approach2a
 input.Approach2a = {};
-input.Approach2a.Enabled = false; % only run if enabled
+input.Approach2a.Enabled = true; % only run if enabled
 input.Approach2a.Dir = fullfile(input.Dir, 'Approach2a');
 input.Approach2a.OverlapDistance = 50; % maximum distance between 2 cluster to mark as coclustered
 input.Approach2a.MaskChannel = 1; % a mask channel to compare to e.g. TCR
