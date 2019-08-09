@@ -4,7 +4,6 @@
 
 close all
 clear
-DEBUG = false;
 
 %% Input and loading
 input = {};
@@ -23,31 +22,23 @@ input.Approach2b.Enabled = true; % only run if enabled
 input.Approach2b.Dir = fullfile(input.Dir, 'Approach2b');
 input.Approach2a.NumNeighbours = 10; % Number of nearesh neighbours
 
-if DEBUG
-    % for quick Debug
-    load(fullfile(input.Dir, 'dbscanResults.mat'));
+% load channel 1 to find number of regions
+fprintf('Loading DBSCAN results...\n');
+load(fullfile(input.Dir, sprintf('Ch%d', 1), 'DBSCAN_Cluster_Result.mat'));
+num_regions = numel(ClusterSmoothTable);
 
-else
-    % load channel 1 to find number of regions
-    fprintf('Loading DBSCAN results...\n');
-    load(fullfile(input.Dir, sprintf('Ch%d', 1), 'DBSCAN_Cluster_Result.mat'));
-    num_regions = numel(ClusterSmoothTable);
-    
-    dbscanResults = cell(num_regions, input.NumChannels);
-    for rr=1:num_regions
-        for ii=1:input.NumChannels
-            fprintf('Loading DBSCAN result region %d channel %d...\n', rr, ii);
-            load(fullfile(input.Dir, sprintf('Ch%d', ii), 'DBSCAN_Cluster_Result.mat'));
-            result = {};
-            result.ClusterSmoothTable = ClusterSmoothTable{1,1};
-            result.Result = Result{1,1};
-            dbscanResults{rr,ii} = result;
-        end
+dbscanResults = cell(num_regions, input.NumChannels);
+for rr=1:num_regions
+    for ii=1:input.NumChannels
+        fprintf('Loading DBSCAN result region %d channel %d...\n', rr, ii);
+        load(fullfile(input.Dir, sprintf('Ch%d', ii), 'DBSCAN_Cluster_Result.mat'));
+        result = {};
+        result.ClusterSmoothTable = ClusterSmoothTable{rr,1};
+        result.Result = Result{rr,1};
+        dbscanResults{rr,ii} = result;
     end
-    clearvars ClusterSmoothTable Result
-    % uncomment the following line to save for DEBUG
-    %save(fullfile(input.Dir, 'dbscanResults.mat'), 'dbscanResults');
 end
+clearvars ClusterSmoothTable Result
 
 %% Main process
 pointtypes = {'r.', 'g.', 'b.'};
