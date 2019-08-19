@@ -60,7 +60,7 @@ function statusbarHandles = statusbar(varargin)
 %
 %      % sb.ProgressBar is by default invisible, determinite, non-continuous fill, min=0, max=100, initial value=0
 %      set(sb.ProgressBar, 'Visible',true, 'Minimum',0, 'Maximum',500, 'Value',234);
-%      set(sb.ProgressBar, 'Visible',true, 'Indeterminate',false); % indeterminate (annimated)
+%      set(sb.ProgressBar, 'Visible',true, 'Indeterminate',true); % indeterminate (animated)
 %      set(sb.ProgressBar, 'Visible',true, 'StringPainted',true);  % continuous fill
 %      set(sb.ProgressBar, 'Visible',true, 'StringPainted',true, 'string',''); % continuous fill, no percentage text
 %
@@ -91,6 +91,7 @@ function statusbarHandles = statusbar(varargin)
 %     2011-10-14: Fix for R2011b
 %     2014-10-13: Fix for R2014b
 %     2015-03-22: Updated usage examples (no changes to the code)
+%     2018-06-17: Fixes for HG2; fixed indeterminite progress-bar usage example
 %
 %   See also:
 %     ishghandle, sprintf, findjobj (on the <a href="http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=14317">file exchange</a>)
@@ -99,7 +100,7 @@ function statusbarHandles = statusbar(varargin)
 % referenced and attributed as such. The original author maintains the right to be solely associated with this work.
 
 % Programmed and Copyright by Yair M. Altman: altmany(at)gmail.com
-% $Revision: 1.7 $  $Date: 2015/03/22 11:52:24 $
+% $Revision: 1.8 $  $Date: 2018/06/17 19:55:23 $
 
     % Check for available Java/AWT (not sure if Swing is really needed so let's just check AWT)
     if ~usejava('awt')
@@ -224,6 +225,7 @@ function statusbarObj = setFigureStatus(hFig, deleteFlag, updateFlag, statusText
         statusbarObj = jRootPane.getStatusBar;
 
         % If status-bar deletion was requested
+        jProgressBar = [];
         if deleteFlag
             % Non-empty statusbarObj - delete it
             if ~isempty(statusbarObj)
@@ -247,14 +249,21 @@ function statusbarObj = setFigureStatus(hFig, deleteFlag, updateFlag, statusText
         if ~isempty(statusbarObj)
             addOrUpdateProp(statusbarObj,'CornerGrip',  statusbarObj.getParent.getComponent(0));
             addOrUpdateProp(statusbarObj,'TextPanel',   statusbarObj.getComponent(0));
-            addOrUpdateProp(statusbarObj,'ProgressBar', statusbarObj.getComponent(1).getComponent(0));
+
+            % No progress-bar component in docked figures - https://mail.google.com/mail/u/0/#inbox/163c5f4f84887134
+            try jProgressBar = statusbarObj.getComponent(1).getComponent(0); catch, end
+            addOrUpdateProp(statusbarObj,'ProgressBar', jProgressBar);
         end
     catch
         try
             try
-                title = jFrame.fFigureClient.getWindow.getTitle;
+                title = jFrame.fFigureClient.getWindow.getTitle;  % This works up to R2011a
             catch
-                title = jFrame.fHG1Client.getWindow.getTitle;
+                try
+                    title = jFrame.fHG1Client.getWindow.getTitle;  % This works from R2008b-R2014a
+                catch
+                    title = jFrame.fHG2Client.getWindow.getTitle;  % This works from R2014b and up
+                end
             end
         catch
             title = get(hFig,'Name');

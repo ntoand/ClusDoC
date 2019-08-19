@@ -74,6 +74,16 @@ function DoCGUIInitialize(varargin)
         'Position',[0.200    vpos    0.75    0.06], 'BackgroundColor', [1 1 1], ...
         'String', '(empty)', 'HorizontalAlignment','left');
     
+    % channel 5
+    vpos = vpos - vdelta;
+    handles.handles.hLoadCh5 =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Load channel 5',...
+        'Position', [0.01    vpos   0.1500    0.05], 'Callback', @LoadChannel5, 'Enable', 'off');
+
+    handles.handles.hCh5Text = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
+        'Position',[0.200    vpos    0.75    0.06], 'BackgroundColor', [1 1 1], ...
+        'String', '(empty)', 'HorizontalAlignment','left');
+    
+    % 
     vpos = vpos - 1.5*vdelta;
     handles.handles.hPixelSizeText = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
         'Position',[0.02    vpos    0.2    0.05], 'BackgroundColor', [1 1 1], ...
@@ -83,13 +93,13 @@ function DoCGUIInitialize(varargin)
         'Position',[0.2    vpos+0.01    0.15    0.05], 'BackgroundColor', [1 1 1], ...
         'String', '65');
     
-    vpos = vpos - 2*vdelta;
+    vpos = vpos - 1.5*vdelta;
     handles.handles.hConvert =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'CONVERT',...
         'Position', [0.01    vpos    0.2    0.1],...
         'Callback', @Convert);
     
     handles.handles.hStatus = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
-        'Position',[0.02    0.12    0.8    0.07], 'BackgroundColor', [1 1 1], ...
+        'Position',[0.02    0.1    0.8    0.07], 'BackgroundColor', [1 1 1], ...
         'String', '(status)', 'HorizontalAlignment','left');
     
     
@@ -167,6 +177,9 @@ function LoadChannel(ch)
         set(handles.handles.hLoadCh4, 'Enable', 'on');
     elseif(ch == 4)
         set(handles.handles.hCh4Text, 'String', fullFilename);
+        set(handles.handles.hLoadCh5, 'Enable', 'on');
+    elseif(ch == 5)
+        set(handles.handles.hCh5Text, 'String', fullFilename);
     end
     
     if(ch > 1)
@@ -190,6 +203,10 @@ end
 
 function LoadChannel4(~, ~, ~)
     LoadChannel(4);
+end
+
+function LoadChannel5(~, ~, ~)
+    LoadChannel(5);
 end
 
 function Convert(~, ~, ~)
