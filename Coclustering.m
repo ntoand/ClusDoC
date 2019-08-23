@@ -8,8 +8,7 @@ clear
 %% Input and loading
 input = {};
 input.Dir = '/Users/toand/git/mivp/projects/nsw-melbourne/cluster_analysis/ClusDoC/test_dataset/3channels/Condition1_3G/Extracted_Region/DBSCAN Results';
-input.NumChannels = 3;
-input.ShowFigures = true;
+input.ShowFigures = false;
 % Approach2a
 input.Approach2a = {};
 input.Approach2a.Enabled = true; % only run if enabled
@@ -27,6 +26,22 @@ fprintf('Loading DBSCAN results...\n');
 load(fullfile(input.Dir, sprintf('Ch%d', 1), 'DBSCAN_Cluster_Result.mat'));
 num_regions = numel(ClusterSmoothTable);
 
+% find number of channels
+input.NumChannels = 0;
+for ii=1:10
+    fname = fullfile(input.Dir, sprintf('Ch%d', ii));
+    if exist(fname,'dir') == 7
+        input.NumChannels = ii;
+    else
+        break;
+    end 
+end
+fprintf('Number of channels: %d\n', input.NumChannels);
+if(input.NumChannels == 0)
+    fprintf('ERROR: failed to get channels, please check input input.Dir\n');
+end
+
+% load DBSCAN data
 dbscanResults = cell(num_regions, input.NumChannels);
 for rr=1:num_regions
     for ii=1:input.NumChannels
@@ -39,6 +54,7 @@ for rr=1:num_regions
     end
 end
 clearvars ClusterSmoothTable Result
+
 
 %% Main process
 pointtypes = {'r.', 'g.', 'b.'};
@@ -106,18 +122,34 @@ for rr=1:num_regions
                     end
                 end
             end
+            
+            %write to file
+            f1 = fopen(fullfile(input.Approach2a.Dir, sprintf('Approach2a_ROI%d_MaskChan%d_Ch%d_cocluster.csv', rr, input.Approach2a.MaskChannel, ii)), 'wt');
+            f2 = fopen(fullfile(input.Approach2a.Dir, sprintf('Approach2a_ROI%d_MaskChan%d_Ch%d_no_cocluster.csv', rr, input.Approach2a.MaskChannel, ii)), 'wt');
+            header1 = ['Index,Nb,Area,TotalAreaDensity,Circularity,Mean_Density,AvRelativeDensity,' ...
+                     'NumOverlap,OverlapClusters,OverlapMinDistances\n'];
+            fprintf(f1, header1); 
+            header2 = 'Index,Nb,Area,TotalAreaDensity,Circularity,Mean_Density,AvRelativeDensity\n';
+            fprintf(f2, header2);
+            for cInd=1:size(result2A, 1)
+                numoverlap = numel(result2A{cInd, 2*(curChan-1)+1});
+                c = maskClusters{cInd};
+                if(numoverlap > 0)
+                    fprintf(f1, '%d,%d,%0.4f,%0.4f,%0.4f,%0.4f,%0.4f,%d,%s,%s\n', ...
+                                cInd,c.Nb,c.Area,c.TotalAreaDensity,c.Circularity,c.Mean_Density,c.AvRelativeDensity,...
+                                numoverlap,array2str(result2A{cInd, 2*(curChan-1)+1}, false),array2str(result2A{cInd, 2*(curChan-1)+2}, true));
+                else
+                    fprintf(f2, '%d,%d,%0.4f,%0.4f,%0.4f,%0.4f,%0.4f\n', ...
+                                cInd,c.Nb,c.Area,c.TotalAreaDensity,c.Circularity,c.Mean_Density,c.AvRelativeDensity);
+                end
+            end
+            fclose(f1); fclose(f2);
+            
         end
         
         % write results to files
         fprintf('Region %d Approach2a: saving results to files ...\n', rr);
         save(fullfile(input.Approach2a.Dir, sprintf('Approach2a_ROI%d_MaskChan%d.mat', rr, input.Approach2a.MaskChannel)), 'result2A');
-        f = fopen(fullfile(input.Approach2a.Dir, sprintf('Approach2a_ROI%d_MaskChan%d.csv', rr, input.Approach2a.MaskChannel)), 'wt');
-        fprintf(f, 'CluseterIndex,ClusterSize,Ch1_NumOverlap,Ch1_OverlapClusters,Ch1_MinDistances,Ch2_NumOverlap,Ch2_OverlapClusters,Ch2_MinDistances\n');
-        for ii=1:size(result2A, 1)
-            fprintf(f, '%d,%d,%d,%s,%s,%d,%s,%s\n',ii, numel(maskClusters{ii,1}.Points), numel(result2A{ii, 1}),array2str(result2A{ii, 1}),array2str(result2A{ii, 2}, 3), ...
-                                                   numel(result2A{ii, 3}), array2str(result2A{ii, 3}), array2str(result2A{ii, 4}, 3));
-        end
-        fclose(f);
         
     end % approach 2a
 
@@ -173,7 +205,7 @@ function res = array2str(arr, real)
         format = '%0.2f';
     end
     res = '';
-    if numel(arr) > 1
+    if numel(arr) > 0
         res = sprintf(format, arr(1));
     end
     for ii=2:numel(arr)
