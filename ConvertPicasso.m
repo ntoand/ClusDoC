@@ -21,7 +21,7 @@ function DoCGUIInitialize(varargin)
         fig1 = figObj;
     else
         WIDTH = 800;
-        HEIGHT = 500;
+        HEIGHT = 550;
         ss = get(0,'screensize');
         left = (ss(3) - WIDTH) / 2;
         bottom = (ss(4) - HEIGHT) / 2;
@@ -38,7 +38,7 @@ function DoCGUIInitialize(varargin)
     
     % controls
     vpos = 0.9;
-    vdelta = 0.1;
+    vdelta = 0.09;
     % channel 1
     handles.handles.hLoadCh1 =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Load channel 1',...
         'Position', [0.01    vpos    0.1500    0.05], 'Callback', @LoadChannel1, 'Enable', 'on');
@@ -83,6 +83,15 @@ function DoCGUIInitialize(varargin)
         'Position',[0.200    vpos    0.75    0.06], 'BackgroundColor', [1 1 1], ...
         'String', '(empty)', 'HorizontalAlignment','left');
     
+    % channel 6
+    vpos = vpos - vdelta;
+    handles.handles.hLoadCh6 =  uicontrol(fig1, 'Units', 'normalized', 'Style', 'pushbutton', 'String', 'Load channel 6',...
+        'Position', [0.01    vpos   0.1500    0.05], 'Callback', @LoadChannel6, 'Enable', 'off');
+
+    handles.handles.hCh6Text = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
+        'Position',[0.200    vpos    0.75    0.06], 'BackgroundColor', [1 1 1], ...
+        'String', '(empty)', 'HorizontalAlignment','left');
+    
     % 
     vpos = vpos - 1.5*vdelta;
     handles.handles.hPixelSizeText = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
@@ -99,12 +108,12 @@ function DoCGUIInitialize(varargin)
         'Callback', @Convert);
     
     handles.handles.hStatus = uicontrol(fig1, 'Style', 'text', 'Units', 'normalized', ...
-        'Position',[0.02    0.1    0.8    0.07], 'BackgroundColor', [1 1 1], ...
+        'Position',[0.02    0.06    0.8    0.07], 'BackgroundColor', [1 1 1], ...
         'String', '(status)', 'HorizontalAlignment','left');
     
     
     set(handles.handles.hConvert, 'enable', 'off');
-    handles.files = cell(4, 1);
+    handles.files = cell(6, 1);
     handles.numChannels = 0;
     handles.currDir = '';
     
@@ -180,6 +189,9 @@ function LoadChannel(ch)
         set(handles.handles.hLoadCh5, 'Enable', 'on');
     elseif(ch == 5)
         set(handles.handles.hCh5Text, 'String', fullFilename);
+        set(handles.handles.hLoadCh6, 'Enable', 'on');
+    elseif(ch == 6)
+        set(handles.handles.hCh6Text, 'String', fullFilename);
     end
     
     if(ch > 1)
@@ -208,6 +220,11 @@ end
 function LoadChannel5(~, ~, ~)
     LoadChannel(5);
 end
+
+function LoadChannel6(~, ~, ~)
+    LoadChannel(6);
+end
+
 
 function Convert(~, ~, ~)
     

@@ -7,12 +7,12 @@ function ReviewClusters(varargin)
     if ~isempty(figObj)
         figure(figObj);
     else
-        DoCGUIInitialize();
+        GUIInitialize();
     end
 end
 
 
-function DoCGUIInitialize(varargin)
+function GUIInitialize(varargin)
 
     figObj = findobj('Tag', 'REVIEWCLUSTERS GUI');
     settings = LoadSettings();
