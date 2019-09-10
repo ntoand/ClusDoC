@@ -424,6 +424,7 @@ function initializeParameters(varargin)
     
     % Initialize structure to pass values between GUI components
     handles.CellData = {};
+    handles.CellDataExport = {};
     handles.ROIData = {};
     handles.ROIPos = [];
     handles.CurrentCellData = 1;
@@ -450,8 +451,8 @@ function initializeParameters(varargin)
     handles.RipleyK.MaxSampledPts = 1e4;
     
     % Default DBSCAN parameters
-    % maximum for 4 channels = 10
-    for k = 1:10
+    % maximum for 6 channels = 21
+    for k = 1:21
         handles.DBSCAN(k).Epsilon = 20;
         handles.DBSCAN(k).MinPts = 3;
         handles.DBSCAN(k).UseLr_rThresh = true;
@@ -466,6 +467,8 @@ function initializeParameters(varargin)
     end
     
     % Default DoC parameters
+    handles.DoC.TCR = 1;    % TCR channel. Default Ch1
+    handles.DoC.Signal = 2; % Signal channel. Default Ch2
     handles.DoC.Lr_rRad = 20;
     handles.DoC.Rmax = 500;
     handles.DoC.Step = 10;
@@ -473,6 +476,8 @@ function initializeParameters(varargin)
     handles.DoC.NbThresh = 10;
     
     % Default PoC parameters
+    handles.PoC.TCR = 1;    % TCR channel. Default Ch1
+    handles.PoC.Signal = 2; % Signal channel. Default Ch2
     handles.PoC.FuncType = handles.CONST.POC_TYPE1;
     handles.PoC.Lr_rRad = 20;
     handles.PoC.Sigma = 100;
@@ -1103,6 +1108,7 @@ function cellData = assignROIsToCellData(cellData, roiArray, nDataColumns)
         % Iterate over array of cell data
         
         cellData{k}(:, nDataColumns + 1) = 0;
+        cellData{k}(:, nDataColumns + 10) = 0;
         
         for m = 1:length(roiArray{k})
             % Iterate over each ROI in that cell
@@ -2089,25 +2095,20 @@ function RunDoC(~, ~, ~)
     UpdateStatusBar(handles, 'Running DoC on ROI...');
     drawnow;
     
-    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
+    % Input parameters for calculating DoC scores for all points
+	[handles, returnVal] = InputDialogs(handles, 'doc');
     
-    
+    % Create directories
     CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results'));
     CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DoC histograms'));
     CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results'));
-    if(~isCombined)
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch1'));
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch1', 'Cluster maps'));
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch2'));
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Ch2', 'Cluster maps'));
-    else
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Combined'));
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Combined', 'Cluster maps'));
-    end
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', sprintf('TCR_Ch%d', handles.DoC.TCR)));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', sprintf('TCR_Ch%d', handles.DoC.TCR), 'Cluster maps'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', sprintf('Signal_Ch%d', handles.DoC.Signal)));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', sprintf('Signal_Ch%d', handles.DoC.Signal), 'Cluster maps'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Combined'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DBSCAN Results', 'Combined', 'Cluster maps'));
     CreateDir(fullfile(handles.Outputfolder, 'Clus-DoC Results', 'DoC Statistics and Plots'));
-    
-    % Input parameters for calculating DoC scores for all points
-	[handles, returnVal] = InputDialogs(handles, 'doc');
         
     if returnVal == 0
         
@@ -2131,6 +2132,12 @@ function RunDoC(~, ~, ~)
                 dbscanParams(i).ScoreThreshold = handles.DoC.ColoThres;
                 dbscanParams(i).settings = handles.settings;
             end
+            dbscanParams(1).Name = sprintf('TCR_Ch%d', handles.DoC.TCR);
+            dbscanParams(2).Name = sprintf('Signal_Ch%d', handles.DoC.Signal);
+            dbscanParams(3).Name = 'Combined';
+            
+            handles.settings.TCR = handles.DoC.TCR;
+            handles.settings.Signal = handles.DoC.Signal;
             
             % cd to DoC_Result
             
@@ -2144,6 +2151,20 @@ function RunDoC(~, ~, ~)
             % DBSCAN_Nb_Neighbor=3; - minPts ;
             % threads = 2
             
+            % extract data for TCR and Signal channels
+            if(handles.Nchannels > 2)
+                CellDataBackup = handles.CellData;
+                for cellIter = 1:length(handles.CellData)
+                    cellData = handles.CellData{cellIter};
+                    ind1 = cellData(:, 12) == handles.DoC.TCR;
+                    ind2 = cellData(:, 12) == handles.DoC.Signal;
+                    cellData(ind1, 12) = 1;
+                    cellData(ind2, 12) = 2;
+                    handles.CellData{cellIter} = cellData(ind1 | ind2, :);
+                end
+            end
+                
+            
             UpdateStatusBar(handles, 'Calculating DoC...');
             [handles.CellData, DensityROI] = DoCHandler(handles.ROICoordinates, handles.CellData, ...
                 handles.DoC.Lr_rRad, handles.DoC.Rmax, handles.DoC.Step, ...
@@ -2151,36 +2172,49 @@ function RunDoC(~, ~, ~)
             
             %%%%%%%%%%%%%%%
             % Plotting, segmentation, and statistics start here
-            
             UpdateStatusBar(handles, 'Processing DoC results...');
             ResultTable = ProcessDoCResults(handles.CellData, handles.NDataColumns, handles.ROICoordinates, ...
                 DensityROI, fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.DoC.ColoThres, handles.settings);
             
             
             % Run DBSCAN on data used for DoC analysis
-            UpdateStatusBar(handles, 'DBSCAN on DoC results...');
-            [ClusterTableCh1, ClusterTableCh2, ClusterTableCombined, clusterIDOut, handles.ClusterTable] = DBSCANonDoCResults(handles.CellData, handles.ROICoordinates, ...
+            % separate channels
+            isCombined = false;
+            UpdateStatusBar(handles, 'DBSCAN on DoC results - separated channels...');
+            [ClusterTableCh1, ClusterTableCh2, ~, clusterIDOut, handles.ClusterTable] = DBSCANonDoCResults(handles.CellData, handles.ROICoordinates, ...
                 fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.Chan1Color, handles.Chan2Color, dbscanParams, handles.NDataColumns, ...
                 handles.CombinedColor, isCombined);
             
             UpdateStatusBar(handles, 'Assigning DoC data to points...');
             handles = AssignDoCDataToPoints(handles, clusterIDOut, isCombined);
             
-            %
-            %                 assignin('base', 'ClusterTableCh1', ClusterTableCh1);
-            %                 assignin('base', 'ClusterTableCh2', ClusterTableCh2);
-            %                 assignin('base', 'ResultTable', ResultTable);
-            
-            % ^ Doesn't quite capture all of the stats that
-            % EvalStatisticsOnDBSCANandDoCResults.m does in ClusterTable.  Let's see
-            % if/when it falls apart
-            
             UpdateStatusBar(handles, 'Evaluating statistics on DBSCAN and DoC results...');
-            if(~isCombined)
-                EvalStatisticsOnDBSCANandDoCResults(ClusterTableCh1, 1, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
-                EvalStatisticsOnDBSCANandDoCResults(ClusterTableCh2, 2, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
-            else
-                EvalStatisticsOnDBSCANandDoCResults(ClusterTableCombined, 3, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
+            EvalStatisticsOnDBSCANandDoCResults(ClusterTableCh1, 1, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
+            EvalStatisticsOnDBSCANandDoCResults(ClusterTableCh2, 2, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
+            
+            % combined
+            isCombined = true;
+            UpdateStatusBar(handles, 'DBSCAN on DoC results - combined data...');
+            [~, ~, ClusterTableCombined, clusterIDOut, handles.ClusterTable] = DBSCANonDoCResults(handles.CellData, handles.ROICoordinates, ...
+                fullfile(handles.Outputfolder, 'Clus-DoC Results'), handles.Chan1Color, handles.Chan2Color, dbscanParams, handles.NDataColumns, ...
+                handles.CombinedColor, isCombined);
+            
+            UpdateStatusBar(handles, 'Assigning DoC data to points...');
+            handles = AssignDoCDataToPoints(handles, clusterIDOut, isCombined);
+            
+            EvalStatisticsOnDBSCANandDoCResults(ClusterTableCombined, 3, fullfile(handles.Outputfolder, 'Clus-DoC Results'));
+            
+            
+            % restore CellData
+            if(handles.Nchannels > 2)
+                handles.CellDataExport = handles.CellData;
+                for cellIter = 1:length(handles.CellDataExport)
+                    cellData = handles.CellDataExport{cellIter};
+                    cellData(cellData(:, 12) == 1, 12) = handles.DoC.TCR;
+                    cellData(cellData(:, 12) == 2, 12) = handles.DoC.Signal;
+                    handles.CellDataExport{cellIter} = cellData;
+                end
+                handles.CellData = CellDataBackup;
             end
             
             guidata(handles.handles.MainFig, handles);
@@ -2233,26 +2267,21 @@ function RunPoC(~, ~, ~)
     UpdateStatusBar(handles, 'Running PoC on ROI...');
     drawnow;
     
-    isCombined = handles.ProcessType == handles.CONST.PROCESS_COMBINED;
+    % Input parameters for calculating DoC scores for all points
+	[handles, returnVal] = InputDialogs(handles, 'poc');
     
-    
+    % Create directories
     CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results'));
     CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'PoC histograms'));
     CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results'));
-    if(~isCombined)
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Ch1'));
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Ch1', 'Cluster maps'));
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Ch2'));
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Ch2', 'Cluster maps'));
-    else
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Combined'));
-        CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Combined', 'Cluster maps'));
-    end
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', sprintf('TCR_Ch%d', handles.PoC.TCR)));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', sprintf('TCR_Ch%d', handles.PoC.TCR), 'Cluster maps'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', sprintf('Signal_Ch%d', handles.PoC.Signal)));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', sprintf('Signal_Ch%d', handles.PoC.Signal), 'Cluster maps'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Combined'));
+    CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'DBSCAN Results', 'Combined', 'Cluster maps'));
     CreateDir(fullfile(handles.Outputfolder, 'Clus-PoC Results', 'PoC Statistics and Plots'));
     
-    % Input parameters for calculating DoC scores for all points
-	[handles, returnVal] = InputDialogs(handles, 'poc');
-        
     if returnVal == 0
         
         set(handles.handles.MainFig, 'pointer', 'arrow');
@@ -2275,6 +2304,12 @@ function RunPoC(~, ~, ~)
                 dbscanParams(i).ScoreThreshold = handles.PoC.ColoThres;
                 dbscanParams(i).settings = handles.settings;
             end
+            dbscanParams(1).Name = sprintf('TCR_Ch%d', handles.DoC.TCR);
+            dbscanParams(2).Name = sprintf('Signal_Ch%d', handles.DoC.Signal);
+            dbscanParams(3).Name = 'Combined';
+            
+            handles.settings.TCR = handles.PoC.TCR;
+            handles.settings.Signal = handles.PoC.Signal;
             
             % cd to DoC_Result
             
@@ -2285,6 +2320,19 @@ function RunPoC(~, ~, ~)
             % DBSCAN_Radius=20 - epsilon
             % DBSCAN_Nb_Neighbor=3; - minPts ;
             % threads = 2
+            
+            % extract data for TCR and Signal channels
+            if(handles.Nchannels > 2)
+                CellDataBackup = handles.CellData;
+                for cellIter = 1:length(handles.CellData)
+                    cellData = handles.CellData{cellIter};
+                    ind1 = cellData(:, 12) == handles.PoC.TCR;
+                    ind2 = cellData(:, 12) == handles.PoC.Signal;
+                    cellData(ind1, 12) = 1;
+                    cellData(ind2, 12) = 2;
+                    handles.CellData{cellIter} = cellData(ind1 | ind2, :);
+                end
+            end
             
             UpdateStatusBar(handles, 'Calculating PoC...');
             [handles.CellData, DensityROI] = PoCHandler(handles.ROICoordinates, handles.CellData, ...
@@ -2297,20 +2345,44 @@ function RunPoC(~, ~, ~)
                 DensityROI, fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.PoC.ColoThres, handles.settings);
             
             % Run DBSCAN on data used for DoC analysis
-            UpdateStatusBar(handles, 'DBSCAN on PoC results...');
-            [ClusterTableCh1, ClusterTableCh2, ClusterTableCombined, clusterIDOut, handles.ClusterTable] = DBSCANonPoCResults(handles.CellData, handles.ROICoordinates, ...
+            % separate channels
+            isCombined = false;
+            UpdateStatusBar(handles, 'DBSCAN on PoC results - separated channels...');
+            [ClusterTableCh1, ClusterTableCh2, ~, clusterIDOut, handles.ClusterTable] = DBSCANonPoCResults(handles.CellData, handles.ROICoordinates, ...
                 fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.Chan1Color, handles.Chan2Color, dbscanParams, handles.NDataColumns, ...
                 handles.CombinedColor, isCombined);
+            
             
             UpdateStatusBar(handles, 'Assigning PoC data to points...');
             handles = AssignPoCDataToPoints(handles, clusterIDOut, isCombined);
             
             UpdateStatusBar(handles, 'Evaluating statistics on DBSCAN and PoC results...');
-            if(~isCombined)
-                EvalStatisticsOnDBSCANandPoCResults(ClusterTableCh1, 1, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
-                EvalStatisticsOnDBSCANandPoCResults(ClusterTableCh2, 2, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
-            else
-                EvalStatisticsOnDBSCANandDoCResults(ClusterTableCombined, 3, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
+            EvalStatisticsOnDBSCANandPoCResults(ClusterTableCh1, 1, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
+            EvalStatisticsOnDBSCANandPoCResults(ClusterTableCh2, 2, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
+            
+            % combined
+            isCombined = true;
+            UpdateStatusBar(handles, 'DBSCAN on PoC results - combined data...');
+            [~, ~, ClusterTableCombined, clusterIDOut, handles.ClusterTable] = DBSCANonPoCResults(handles.CellData, handles.ROICoordinates, ...
+                fullfile(handles.Outputfolder, 'Clus-PoC Results'), handles.Chan1Color, handles.Chan2Color, dbscanParams, handles.NDataColumns, ...
+                handles.CombinedColor, isCombined);
+            
+            UpdateStatusBar(handles, 'Assigning PoC data to points...');
+            handles = AssignDoCDataToPoints(handles, clusterIDOut, isCombined);
+            
+            UpdateStatusBar(handles, 'Evaluating statistics on DBSCAN and PoC results...');
+            EvalStatisticsOnDBSCANandDoCResults(ClusterTableCombined, 3, fullfile(handles.Outputfolder, 'Clus-PoC Results'));
+            
+            % restore CellData
+            if(handles.Nchannels > 2)
+                handles.CellDataExport = handles.CellData;
+                for cellIter = 1:length(handles.CellDataExport)
+                    cellData = handles.CellDataExport{cellIter};
+                    cellData(cellData(:, 12) == 1, 12) = handles.DoC.TCR;
+                    cellData(cellData(:, 12) == 2, 12) = handles.DoC.Signal;
+                    handles.CellDataExport{cellIter} = cellData;
+                end
+                handles.CellData = CellDataBackup;
             end
             
             guidata(handles.handles.MainFig, handles);
@@ -2400,15 +2472,19 @@ function ExportToTextPush(varargin)
 
     handles = guidata(findobj('tag', 'PALM GUI'));
     
+    if isempty(handles.CellDataExport)
+        handles.CellDataExport = handles.CellData;
+    end
+    
     try
         set(get(handles.handles.b_panel, 'children'), 'enable', 'off')
         set(handles.handles.MainFig, 'pointer', 'watch');
 
         w = waitbar(0, 'Export Data to txt files');
 
-        for fN = 1:length(handles.CellData)
+        for fN = 1:length(handles.CellDataExport)
 
-            waitbar(fN/(length(handles.CellData) + 1), w);
+            waitbar(fN/(length(handles.CellDataExport) + 1), w);
 
             fileName = strcat(handles.ImportFiles{fN}(1:(end-4)), '_ExportByPoint.txt');
             UpdateStatusBar(handles, 'Exporting _ExportByPoint.txt file...');
@@ -2429,19 +2505,19 @@ function ExportToTextPush(varargin)
             fprintf(fID, '%s', headerString);
 
             
-            ROIIDStr = dec2bin(handles.CellData{fN}(:,14));
+            ROIIDStr = dec2bin(handles.CellDataExport{fN}(:,14));
             exportInRoi = get(handles.handles.ExportResultsCheckbox, 'Value');
             if(exportInRoi == 0)
-                for k = 1:size(handles.CellData{fN}, 1)
-                    fprintf(fID, fmtStr, handles.CellData{fN}(k,1:handles.NDataColumns), ROIIDStr(k, :), ...
-                        handles.CellData{fN}(k, (handles.NDataColumns + 2):end));
+                for k = 1:size(handles.CellDataExport{fN}, 1)
+                    fprintf(fID, fmtStr, handles.CellDataExport{fN}(k,1:handles.NDataColumns), ROIIDStr(k, :), ...
+                        handles.CellDataExport{fN}(k, (handles.NDataColumns + 2):end));
 
                 end
             else
                 % Since which ROI a point falls in is encoded in binary, decode here
-                whichPointsInROI = fliplr(dec2bin(handles.CellData{handles.CurrentCellData}(:,handles.NDataColumns + 1)));
+                whichPointsInROI = fliplr(dec2bin(handles.CellDataExport{handles.CurrentCellData}(:,handles.NDataColumns + 1)));
                 whichPointsInROI = whichPointsInROI(:,handles.CurrentROIData) == '1';
-                dataCropped = handles.CellData{handles.CurrentCellData}(whichPointsInROI, :);
+                dataCropped = handles.CellDataExport{handles.CurrentCellData}(whichPointsInROI, :);
                 for k = 1:size(dataCropped, 1)
                     fprintf(fID, fmtStr, dataCropped(k,1:handles.NDataColumns), ROIIDStr(k, :), ...
                         dataCropped(k, (handles.NDataColumns + 2):end));
@@ -2462,13 +2538,13 @@ function ExportToTextPush(varargin)
                 fprintf(fID, '# MaskFile: %s\r\n', 'NoMask');
             end
 
-            fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN.Epsilon);
-            fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN.MinPts);
-            fprintf(fID, '# DBSCANUseLr_Thresh: %d\r\n', handles.DBSCAN.UseLr_rThresh);
-            fprintf(fID, '# DBSCANLr_rThreshRad: %.2f\r\n', handles.DBSCAN.Lr_rThreshRad);
-            fprintf(fID, '# DBSCANSmoothingRad: %.2f\r\n', handles.DBSCAN.SmoothingRad);
-            fprintf(fID, '# DBSCANCutoff: %.2f\r\n', handles.DBSCAN.Cutoff);
-            fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN.Threads);
+            fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN(1:handles.Nchannels).Epsilon);
+            fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN(1:handles.Nchannels).MinPts);
+            fprintf(fID, '# DBSCANUseLr_Thresh: %d\r\n', handles.DBSCAN(1:handles.Nchannels).UseLr_rThresh);
+            fprintf(fID, '# DBSCANLr_rThreshRad: %.2f\r\n', handles.DBSCAN(1:handles.Nchannels).Lr_rThreshRad);
+            fprintf(fID, '# DBSCANSmoothingRad: %.2f\r\n', handles.DBSCAN(1:handles.Nchannels).SmoothingRad);
+            fprintf(fID, '# DBSCANCutoff: %.2f\r\n', handles.DBSCAN(1:handles.Nchannels).Cutoff);
+            fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN(1:handles.Nchannels).Threads);
             fprintf(fID, '# DoCLr_rRad: %.2f\r\n', handles.DoC.Lr_rRad);
             fprintf(fID, '# DoCRmax: %d\r\n', handles.DoC.Rmax);
             fprintf(fID, '# DoCStep: %d\r\n', handles.DoC.Step);
@@ -2512,13 +2588,13 @@ function ExportToTextPush(varargin)
             fprintf(fID, '# MaskFile: %s\r\n', 'NoMask');
         end
 
-        fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN.Epsilon);
-        fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN.MinPts);
-        fprintf(fID, '# DBSCANUseLr_Thresh: %d\r\n', handles.DBSCAN.UseLr_rThresh);
-        fprintf(fID, '# DBSCANLr_rThreshRad: %.2f\r\n', handles.DBSCAN.Lr_rThreshRad);
-        fprintf(fID, '# DBSCANSmoothingRad: %.2f\r\n', handles.DBSCAN.SmoothingRad);
-        fprintf(fID, '# DBSCANCutoff: %.2f\r\n', handles.DBSCAN.Cutoff);
-        fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN.Threads);
+        fprintf(fID, '# DBSCANEpsilon: %.3f\r\n', handles.DBSCAN(1:handles.Nchannels).Epsilon);
+        fprintf(fID, '# DBSCANminPts: %d\r\n', handles.DBSCAN(1:handles.Nchannels).MinPts);
+        fprintf(fID, '# DBSCANUseLr_Thresh: %d\r\n', handles.DBSCAN(1:handles.Nchannels).UseLr_rThresh);
+        fprintf(fID, '# DBSCANLr_rThreshRad: %.2f\r\n', handles.DBSCAN(1:handles.Nchannels).Lr_rThreshRad);
+        fprintf(fID, '# DBSCANSmoothingRad: %.2f\r\n', handles.DBSCAN(1:handles.Nchannels).SmoothingRad);
+        fprintf(fID, '# DBSCANCutoff: %.2f\r\n', handles.DBSCAN(1:handles.Nchannels).Cutoff);
+        fprintf(fID, '# DBSCANthreads: %d\r\n', handles.DBSCAN(1:handles.Nchannels).Threads);
         fprintf(fID, '# DoCLr_rRad: %.2f\r\n', handles.DoC.Lr_rRad);
         fprintf(fID, '# DoCRmax: %d\r\n', handles.DoC.Rmax);
         fprintf(fID, '# DoCStep: %d\r\n', handles.DoC.Step);

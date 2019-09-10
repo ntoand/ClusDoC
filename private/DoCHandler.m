@@ -11,7 +11,7 @@ function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, R
 
     Data_DoC = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
     DensityROI = cell(max(cellfun(@length, ROICoordinates)), length(CellData));
-
+    
     for cellIter = 1:length(CellData) % cell number
 
         for roiIter = 1:numel(ROICoordinates{cellIter}) % ROI number
@@ -27,23 +27,21 @@ function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, R
             if ~isempty(dataCropped)
                 
                 dataCropped(isnan(dataCropped(:,12)),:)=[];
-
+                
                 % Send single ROI of data to DoC calculation function
                 [ Data_DegColoc1, SizeROI1 ] = DoCCalc( dataCropped, Lr_rad, Rmax, Step, roiHere );
 
-                CA1 = Data_DegColoc1.DoC((Data_DegColoc1.Ch == 1) & (Data_DegColoc1.Lr_rAboveThresh == 1)); % Ch1 -> Ch2
-                CA2 = Data_DegColoc1.DoC((Data_DegColoc1.Ch == 2) & (Data_DegColoc1.Lr_rAboveThresh == 1)); % Ch2 -> Ch1
+                CA1 = Data_DegColoc1.DoC((Data_DegColoc1.Ch == 1) & (Data_DegColoc1.Lr_rAboveThresh == 1)); % TCR -> Signal
+                CA2 = Data_DegColoc1.DoC((Data_DegColoc1.Ch == 2) & (Data_DegColoc1.Lr_rAboveThresh == 1)); % Signal -> TCR
 
                 handles.handles.DoCFigPerROI = figure('color', [1 1 1], 'inverthardcopy', 'off');
                 
-                
-
                 handles.handles.DoCAxPerROI(1) = subplot(2,1,1);
                 histHand = histogram(handles.handles.DoCAxPerROI(1), CA1, 100);
                 histHand.FaceColor = Chan1Color;
                 histHand.EdgeColor = rgb(52, 73, 94);
                 set(handles.handles.DoCAxPerROI(1), 'XLim', [-1 1]);
-                xlabel(handles.handles.DoCAxPerROI(1), 'DoC Score Ch1 -> Ch2', 'Fontsize', 20);
+                xlabel(handles.handles.DoCAxPerROI(1), sprintf('DoC Score TCR Ch%d -> Signal_Ch%d', settings.TCR, settings.Signal), 'Fontsize', 20);
                 ylabel(handles.handles.DoCAxPerROI(1), 'Frequency','FontSize',20);
                 set(handles.handles.DoCAxPerROI(1),'FontSize',20)
 
@@ -52,7 +50,7 @@ function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, R
                 histHand.FaceColor = Chan2Color;
                 histHand.EdgeColor = rgb(52, 73, 94);
                 set(handles.handles.DoCAxPerROI(2), 'XLim', [-1 1]);
-                xlabel(handles.handles.DoCAxPerROI(2), 'DoC Score Ch2 -> Ch1', 'Fontsize', 20);
+                xlabel(handles.handles.DoCAxPerROI(2), sprintf('DoC Score Signal Ch%d -> TCR_Ch%d', settings.Signal, settings.TCR), 'Fontsize', 20);
                 ylabel(handles.handles.DoCAxPerROI(2), 'Frequency','FontSize',20);
                 set(handles.handles.DoCAxPerROI(2),'FontSize',20)
 
@@ -118,7 +116,7 @@ function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, R
     histHand.FaceColor = Chan1Color;
     histHand.EdgeColor = rgb(52, 73, 94);
     set(handles.handles.DoCAx(1), 'XLim', [-1 1]);
-    xlabel(handles.handles.DoCAx(1), 'DoC Score Ch1 -> Ch2', 'Fontsize', 20);
+    xlabel(handles.handles.DoCAx(1), sprintf('DoC Score TCR Ch%d -> Signal Ch%d', settings.TCR, settings.Signal), 'Fontsize', 20);
     ylabel(handles.handles.DoCAx(1), 'Frequency','FontSize',20);
     set(handles.handles.DoCAx(1),'FontSize',20)
 
@@ -128,7 +126,7 @@ function [CellData, DensityROI] = DoCHandler(ROICoordinates, CellData, Lr_rad, R
 	histHand.FaceColor = Chan2Color;
     histHand.EdgeColor = rgb(52, 73, 94);
     set(handles.handles.DoCAx(2), 'XLim', [-1 1]);
-    xlabel(handles.handles.DoCAx(2), 'DoC Score Ch2 -> Ch1', 'Fontsize', 20);
+    xlabel(handles.handles.DoCAx(2), sprintf('DoC Score Signal Ch%d -> TCR Ch%d', settings.Signal, settings.TCR), 'Fontsize', 20);
     ylabel(handles.handles.DoCAx(2), 'Frequency','FontSize',20);
     set(handles.handles.DoCAx(2),'FontSize',20)
 

@@ -24,8 +24,8 @@ function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType,
                 
                 [ Data_DegColoc1, SizeROI1 ] = PoCCalc( dataCropped, FuncType, Lr_rRad, Sigma, roiHere );
                 
-                CA1 = Data_DegColoc1.PoC((Data_DegColoc1.Ch == 1) & (Data_DegColoc1.Lr_rAboveThresh == 1)); % Ch1 -> Ch2
-                CA2 = Data_DegColoc1.PoC((Data_DegColoc1.Ch == 2) & (Data_DegColoc1.Lr_rAboveThresh == 1)); % Ch2 -> Ch1
+                CA1 = Data_DegColoc1.PoC((Data_DegColoc1.Ch == 1) & (Data_DegColoc1.Lr_rAboveThresh == 1)); % TCR -> Signal
+                CA2 = Data_DegColoc1.PoC((Data_DegColoc1.Ch == 2) & (Data_DegColoc1.Lr_rAboveThresh == 1)); % Signal -> TCR
                 
                 handles.handles.PoCFigPerROI = figure('color', [1 1 1], 'inverthardcopy', 'off');
 
@@ -34,7 +34,7 @@ function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType,
                 histHand.FaceColor = Chan1Color;
                 histHand.EdgeColor = rgb(52, 73, 94);
                 %set(handles.handles.DoCAxPerROI(1), 'XLim', [-1 1]);
-                xlabel(handles.handles.DoCAxPerROI(1), 'PoC Score Ch1', 'Fontsize', 20);
+                xlabel(handles.handles.DoCAxPerROI(1), 'PoC Score TCR', 'Fontsize', 20);
                 ylabel(handles.handles.DoCAxPerROI(1), 'Frequency','FontSize',20);
                 set(handles.handles.DoCAxPerROI(1),'FontSize',20)
 
@@ -43,7 +43,7 @@ function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType,
                 histHand.FaceColor = Chan2Color;
                 histHand.EdgeColor = rgb(52, 73, 94);
                 %set(handles.handles.DoCAxPerROI(2), 'XLim', [-1 1]);
-                xlabel(handles.handles.DoCAxPerROI(2), 'DoC Score Ch2', 'Fontsize', 20);
+                xlabel(handles.handles.DoCAxPerROI(2), 'DoC Score Signal', 'Fontsize', 20);
                 ylabel(handles.handles.DoCAxPerROI(2), 'Frequency','FontSize',20);
                 set(handles.handles.DoCAxPerROI(2),'FontSize',20)
 
@@ -108,7 +108,7 @@ function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType,
     histHand.FaceColor = Chan1Color;
     histHand.EdgeColor = rgb(52, 73, 94);
     %set(handles.handles.PoCAx(1), 'XLim', [-1 1]);
-    xlabel(handles.handles.PoCAx(1), 'PoC Score Ch1', 'Fontsize', 20);
+    xlabel(handles.handles.PoCAx(1), 'PoC Score TCR', 'Fontsize', 20);
     ylabel(handles.handles.PoCAx(1), 'Frequency','FontSize',20);
     set(handles.handles.PoCAx(1),'FontSize',20)
 
@@ -118,7 +118,7 @@ function [CellData, DensityROI] = PoCHandler(ROICoordinates, CellData, FuncType,
 	histHand.FaceColor = Chan2Color;
     histHand.EdgeColor = rgb(52, 73, 94);
     %set(handles.handles.PoCAx(2), 'XLim', [-1 1]);
-    xlabel(handles.handles.PoCAx(2), 'PoC Score Ch2', 'Fontsize', 20);
+    xlabel(handles.handles.PoCAx(2), 'PoC Score Sginal', 'Fontsize', 20);
     ylabel(handles.handles.PoCAx(2), 'Frequency','FontSize',20);
     set(handles.handles.PoCAx(2),'FontSize',20)
 

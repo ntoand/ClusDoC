@@ -119,11 +119,11 @@ Result2.Circularity3=MeanCircularity3;
 
 switch Ch
     case 1
-        ResultCh1=Result2;    
-        save(fullfile(outputFolder, 'ResultCh1.mat'),'ResultCh1')
+        ResultTCR=Result2;    
+        save(fullfile(outputFolder, 'ResultTCR.mat'),'ResultTCR')
     case 2
-        ResultCh2=Result2;    
-        save(fullfile(outputFolder, 'ResultCh2.mat'),'ResultCh2')
+        ResultSignal=Result2;    
+        save(fullfile(outputFolder, 'ResultSignal.mat'),'ResultSignal')
     case 3
         ResultCombined = Result2;
         save(fullfile(outputFolder, 'ResultCombined.mat'),'ResultCombined')
@@ -176,11 +176,11 @@ end
     if ispc
         switch Ch
             case 1
-                xlswrite(fullfile(outputFolder, 'Clus-DoC Ch1.xls'), Array, RegionName, 'A1');
-                xlswrite(fullfile(outputFolder, 'Clus-DoC Ch1.xls'), Matrix_Result, RegionName, 'A2');
+                xlswrite(fullfile(outputFolder, 'Clus-DoC TCR.xls'), Array, RegionName, 'A1');
+                xlswrite(fullfile(outputFolder, 'Clus-DoC TCR.xls'), Matrix_Result, RegionName, 'A2');
             case 2
-                xlswrite(fullfile(outputFolder, 'Clus-DoC Ch2.xls'), Array, RegionName, 'A1');
-                xlswrite(fullfile(outputFolder, 'Clus-DoC Ch2.xls'), Matrix_Result, RegionName, 'A2');
+                xlswrite(fullfile(outputFolder, 'Clus-DoC Signal.xls'), Array, RegionName, 'A1');
+                xlswrite(fullfile(outputFolder, 'Clus-DoC Signal.xls'), Matrix_Result, RegionName, 'A2');
             case 3
                 xlswrite(fullfile(outputFolder, 'Clus-DoC Combined.xls'), Array, RegionName, 'A1');
                 xlswrite(fullfile(outputFolder, 'Clus-DoC Combined.xls'), Matrix_Result, RegionName, 'A2');

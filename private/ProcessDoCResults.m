@@ -240,9 +240,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                         scalebar(gca, MaxSize);
                     end
                     tt = getframe(gcf);
-                    imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.tif', GenericName, 1)));
+                    imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.tif', GenericName, settings.TCR)));
                     if(settings.AlsoSaveFig)
-                        saveas(gcf, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.fig', GenericName, 1)));
+                        saveas(gcf, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.fig', GenericName, settings.TCR)));
                     end
                     %saveas(gcf,strcat('Plot6\',GenericName ,'Plot6',strcat('_Ch',num2str(i))), 'tif');
                     close gcf
@@ -261,9 +261,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                         scalebar(gca, MaxSize);
                     end
                     tt = getframe(gcf);
-                    imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.tif', GenericName, 2)));
+                    imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.tif', GenericName, settings.Signal)));
                     if(settings.AlsoSaveFig)
-                        saveas(gcf, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.fig', GenericName, 2)));
+                        saveas(gcf, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDensity_Ch%d.fig', GenericName, settings.Signal)));
                     end
                     %saveas(gcf,strcat('Plot6\',GenericName ,'Plot6',strcat('_Ch',num2str(i))), 'tif');
                     close gcf
@@ -282,9 +282,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                         scalebar(gca, MaxSize);
                     end
                     tt = getframe(gcf);
-                    imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.tif', GenericName, 1)));
+                    imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.tif', GenericName, settings.TCR)));
                     if(settings.AlsoSaveFig)
-                        saveas(gcf, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.fig', GenericName, 1)));
+                        saveas(gcf, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.fig', GenericName, settings.TCR)));
                     end
                     %saveas(gcf,strcat('Plot6\',GenericName ,'Plot6',strcat('_Ch',num2str(i))), 'tif');
                     close gcf
@@ -303,9 +303,9 @@ Result = struct('Correlation_Coloc1_vs_Density1', [], 'Correlation_Coloc2_vs_Den
                         scalebar(gca, MaxSize);
                     end
                     tt = getframe(gcf);
-                    imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.tif', GenericName, 2)));
+                    imwrite(tt.cdata, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.tif', GenericName, settings.Signal)));
                     if(settings.AlsoSaveFig)
-                        saveas(gcf, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.fig', GenericName, 2)));
+                        saveas(gcf, fullfile(Path_name, f1, 'Density and DoC maps', sprintf('%sDoC_Ch%d.fig', GenericName, settings.Signal)));
                     end
                     %saveas(gcf,strcat('Plot6\',GenericName ,'Plot6',strcat('_Ch',num2str(i))), 'tif');
                     close gcf
@@ -450,8 +450,8 @@ ResultTable = A;
 %    PercentLrAbove05_Ch1=arrayfun(@(x) x{:}.PercentLrAbove05_Ch1,ResultTable)
 %    PercentLrAbove05_Ch2=arrayfun(@(x) x{:}.PercentLrAbove05_Ch2,ResultTable)
     
-    Array1 = [{'Percentage of colocalised Ch1 molecules'}, ...
-        {'Percentage of colocalised Ch2 molecules'}]; %, ...
+    Array1 = [{'Percentage of colocalised TCR molecules'}, ...
+        {'Percentage of colocalised Signal molecules'}]; %, ...
 %         {'AvNormDensity>0.4'},	{'AvNormDensity<0.4'},...
 %         {'AvRelaDensity>0.4'}, {'AvRelaDensity<0.4'}, {'Correlation DC vs Density'}];
     

@@ -36,6 +36,8 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
     handles.RipleyK.MaxSampledPts = 1e4;
     
     % Default DoC parameters
+    handles.DoC.TCR = 1;
+    handles.DoC.Signal = 2;
     handles.DoC.Lr_rRad = 20;
     handles.DoC.Rmax = 500;
     handles.DoC.Step = 10;
@@ -43,6 +45,8 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
     handles.DoC.NbThresh = 10;
     
     % Default PoC parameters
+    handles.PoC.TCR = 1;
+    handles.PoC.Signal = 2;
     handles.PoC.FuncType = handles.CONST.POC_TYPE1;
     handles.PoC.Lr_rRad = 20;
     handles.PoC.Sigma = 100;
@@ -51,9 +55,10 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
     
     handles.DBSCAN_channels = {'Ch1', 'Ch2', 'Ch3'};
     
-    [handles, ~] = setRipleyParameters(handles);
+    [handles, ~] = setPoCParameters(handles);
     %}
     % end for quick debug
+    
     
     if strcmp(name, 'ripley')
         [handles, returnVal] = setRipleyParameters(handles);
@@ -440,6 +445,27 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
             'Position', [0 ypos 200 20], 'horizontalalignment', 'center', 'Fontsize', 10);
         %%%%%%
         
+        channels = cell(handles.Nchannels, 1);
+        for ii = 1:handles.Nchannels
+            channels{ii, 1} = sprintf('Ch%d', ii);
+        end
+        
+        ypos = ypos - HSPACE1;
+        handles.handles.DoCSettingsTextTCR = uicontrol('Style', 'text', ...
+            'String', 'TCR:', 'parent', handles.handles.DoCSettingsFig,...
+            'Position', [0 ypos 100 20], 'horizontalalignment', 'right');
+        
+        handles.handles.DoCTCRPopup = uicontrol('Style', 'popup', 'String', channels,...
+            'Position', [120 ypos 80 20],'Callback', @popupTCRCallback, 'value', handles.DoC.TCR);
+        
+        ypos = ypos - HSPACE1;
+        handles.handles.DoCSettingsTextSignal = uicontrol('Style', 'text', ...
+            'String', 'Signal:', 'parent', handles.handles.DoCSettingsFig,...
+            'Position', [0 ypos 100 20], 'horizontalalignment', 'right');
+        
+        handles.handles.DoCSignalPopup = uicontrol('Style', 'popup', 'String', channels,...
+            'Position', [120 ypos 80 20],'Callback', @popupSignalCallback, 'value', handles.DoC.Signal);
+        
         
         ypos = ypos - HSPACE1;
         handles.handles.DoCSettingsText(1) = uicontrol('Style', 'text', ...
@@ -516,10 +542,10 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         end
 
         handles.handles.DBSCANChannelSelect(1) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-            'Style', 'radiobutton', 'String', 'Ch 1', 'position', [39 7 50 20]);
+            'Style', 'radiobutton', 'String', 'TCR', 'position', [39 7 70 20]);
 
         handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-            'Style', 'radiobutton', 'String', 'Ch 2', 'position', [130 7 50 20]);
+            'Style', 'radiobutton', 'String', 'Signal', 'position', [120 7 70 20]);
 
         if verLessThan('matlab', '8.4')
 
@@ -668,6 +694,12 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
 
         uiwait;
         
+        function popupTCRCallback(hobj, ~)
+        end
+        
+        function popupSignalCallback(hobj, ~)
+        end
+        
         function popupContourCallback(hobj, ~)
             val = get(hobj, 'Value');
             if(val == 1)
@@ -705,10 +737,10 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
 
             changeToValue = (varargin{2}.NewValue);
 
-            if strcmp(changeToValue.String, 'Ch 1');
+            if strcmp(changeToValue.String, 'TCR')
                 ch = 1;
                 oldCh = 2;
-            elseif strcmp(changeToValue.String, 'Ch 2');
+            elseif strcmp(changeToValue.String, 'Signal')
                 ch = 2;
                 oldCh = 1;
             end
@@ -759,6 +791,8 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         function DoCSetAndContinue(varargin)
 
             % Collect inputs and set parameters in guidata
+            handles.DoC.TCR = get(handles.handles.DoCTCRPopup, 'value');
+            handles.DoC.Signal = get(handles.handles.DoCSignalPopup, 'value');
             handles.DoC.Lr_rRad = str2double(get(handles.handles.DoCSettingsEdit(1),'string'));
             handles.DoC.Rmax = str2double(get(handles.handles.DoCSettingsEdit(2),'string'));
             handles.DoC.Step = str2double(get(handles.handles.DoCSettingsEdit(3),'string'));
@@ -817,6 +851,27 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         handles.handles.PoCSettingsTitleText(2) = uicontrol('Style', 'text', ...
             'String', '_____________________', 'parent', handles.handles.PoCSettingsFig,...
             'Position', [0 ypos 200 20], 'horizontalalignment', 'center', 'Fontsize', 10);
+        
+        channels = cell(handles.Nchannels, 1);
+        for ii = 1:handles.Nchannels
+            channels{ii, 1} = sprintf('Ch%d', ii);
+        end
+        
+        ypos = ypos - HSPACE1;
+        handles.handles.PoCSettingsTextTCR = uicontrol('Style', 'text', ...
+            'String', 'TCR:', 'parent', handles.handles.PoCSettingsFig,...
+            'Position', [0 ypos 100 20], 'horizontalalignment', 'right');
+        
+        handles.handles.PoCTCRPopup = uicontrol('Style', 'popup', 'String', channels,...
+            'Position', [120 ypos 80 20],'Callback', @popupTCRCallback, 'value', handles.PoC.TCR);
+        
+        ypos = ypos - HSPACE1;
+        handles.handles.PoCSettingsTextSignal = uicontrol('Style', 'text', ...
+            'String', 'Signal:', 'parent', handles.handles.PoCSettingsFig,...
+            'Position', [0 ypos 100 20], 'horizontalalignment', 'right');
+        
+        handles.handles.PoCSignalPopup = uicontrol('Style', 'popup', 'String', channels,...
+            'Position', [120 ypos 80 20],'Callback', @popupSignalCallback, 'value', handles.PoC.Signal);
 
         %%%%%%
         ypos = ypos - HSPACE1;
@@ -893,10 +948,10 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         end
 
         handles.handles.DBSCANChannelSelect(1) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-            'Style', 'radiobutton', 'String', 'Ch 1', 'position', [39 7 50 20]);
+            'Style', 'radiobutton', 'String', 'TCR', 'position', [39 7 70 20]);
 
         handles.handles.DBSCANChannelSelect(2) = uicontrol(handles.handles.DBSCANChannelToggle, ...
-            'Style', 'radiobutton', 'String', 'Ch 2', 'position', [130 7 50 20]);
+            'Style', 'radiobutton', 'String', 'Signal', 'position', [120 7 70 20]);
 
         if verLessThan('matlab', '8.4')
 
@@ -1045,6 +1100,12 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
 
         uiwait;
         
+        function popupTCRCallback(hobj, ~)
+        end
+        
+        function popupSignalCallback(hobj, ~)
+        end
+        
         function popupContourCallback(hobj, ~)
             val = get(hobj, 'Value');
             if(val == 1)
@@ -1082,10 +1143,10 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
 
             changeToValue = (varargin{2}.NewValue);
 
-            if strcmp(changeToValue.String, 'Ch 1');
+            if strcmp(changeToValue.String, 'TCR')
                 ch = 1;
                 oldCh = 2;
-            elseif strcmp(changeToValue.String, 'Ch 2');
+            elseif strcmp(changeToValue.String, 'Signal')
                 ch = 2;
                 oldCh = 1;
             end
@@ -1136,6 +1197,8 @@ function [handles, returnVal] = InputDialogs(handles, name, varargin)
         function PoCSetAndContinue(varargin)
 
             % Collect inputs and set parameters in guidata
+            handles.PoC.TCR = get(handles.handles.PoCTCRPopup, 'value');
+            handles.PoC.Signal = get(handles.handles.PoCSignalPopup, 'value');
             handles.PoC.FuncType = get(handles.handles.PoCSettingsEdit(1),'value');
             handles.PoC.Lr_rRad = str2double(get(handles.handles.PoCSettingsEdit(2),'string'));
             handles.PoC.Sigma = str2double(get(handles.handles.PoCSettingsEdit(3),'string'));
