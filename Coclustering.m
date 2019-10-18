@@ -96,8 +96,7 @@ function GUIInitialize(varargin)
         'Position', [0.01    vpos    0.2    0.1], 'Enable', 'off', 'Callback', @RunCoclustering);
     
     % initial values
-    handles.DEBUG = false;
-    handles.inputDir = '/Users/toand/git/mivp/projects/nsw-melbourne/cluster_analysis/ClusDoC/test_dataset/3channels/Condition1_3G/Extracted_Region/DBSCAN Results';
+    handles.inputDir = './';
     handles.showFigures = false;
     % Approach2a - Mask Overlap Cocluster
     handles.MaskOverlap = {};
@@ -192,16 +191,16 @@ end
 function SetInputDir(~, ~, ~)
     handles = guidata(findobj('Tag', 'COCLUSTERING GUI'));
     
-    if handles.DEBUG == false
-        currentdirectory = pwd;
-        selpath = uigetdir(currentdirectory, 'Select DBSCAN Results folder');
-        if(selpath == 0)
-            disp('Cancelled!');
-            return;
-        end
-        set(handles.handles.hInputDirText, 'String', selpath);
-        handles.inputDir = selpath;
+    currentdirectory = pwd;
+    selpath = uigetdir(currentdirectory, 'Select DBSCAN Results folder');
+    if(selpath == 0)
+        disp('Cancelled!');
+        return;
     end
+    set(handles.handles.hInputDirText, 'String', selpath);
+    handles.inputDir = selpath;
+    handles.MaskOverlap.Dir = fullfile(handles.inputDir, 'MaskOverlapCocluster');
+    handles.NearestNeighbour.Dir = fullfile(handles.inputDir, 'NearestNeighbourCocluster');
     
     set(handles.handles.MainFig, 'pointer', 'watch'); drawnow;
     handles = LoadInputData(handles);
@@ -231,25 +230,12 @@ function handles = LoadInputData(handles)
     end
 
     % load channel 1 to find number of regions
-    fprintf('Load DBSCAN results...\n');
-    statusbar(handles.handles.MainFig, 'Load DBSCAN results');
+    fprintf('Load parameters from DBSCAN results...\n');
+    statusbar(handles.handles.MainFig, 'Load parameters from DBSCAN results...');
     
     load(fullfile(handles.inputDir, sprintf('Ch%d', 1), 'DBSCAN_Cluster_Result.mat'), 'ClusterSmoothTable');
     handles.numRegions = size(ClusterSmoothTable, 1);
 
-    handles.dbscanResults = cell(handles.numRegions, handles.numChannels);
-    for rr=1:handles.numRegions
-        for ii=1:handles.numChannels
-            fprintf('Loading DBSCAN result region %d channel %d...\n', rr, ii);
-            statusbar(handles.handles.MainFig, sprintf('Loading DBSCAN result region %d channel %d...\n', rr, ii));
-            load(fullfile(handles.inputDir, sprintf('Ch%d', ii), 'DBSCAN_Cluster_Result.mat'), 'ClusterSmoothTable', 'Result');
-            result = {};
-            result.ClusterSmoothTable = ClusterSmoothTable{rr,1};
-            result.Result = Result{rr,1};
-            handles.dbscanResults{rr,ii} = result;
-        end
-    end
-    clearvars ClusterSmoothTable Result
     
     % update roi popup
     values = cell(handles.numChannels, 1);
@@ -260,7 +246,7 @@ function handles = LoadInputData(handles)
         
     set(handles.handles.hRun, 'Enable', 'on');
     handles.loaded = true;
-    statusbar(handles.handles.MainFig, 'Data loaded! Now you can run Colustering');
+    statusbar(handles.handles.MainFig, 'Now you can run Colustering');
     
 end
 
@@ -277,6 +263,19 @@ function RunCoclustering(~, ~, ~)
     for rr=1:handles.numRegions
     
         fprintf('Processing region %d ...\n', rr);
+        
+        % load data for the region
+        dbscanResults = cell(handles.numChannels, 1);
+        for ii=1:handles.numChannels
+            fprintf('Loading DBSCAN result region %d channel %d...\n', rr, ii);
+            statusbar(handles.handles.MainFig, sprintf('Loading DBSCAN result region %d channel %d...\n', rr, ii));
+            load(fullfile(handles.inputDir, sprintf('Ch%d', ii), 'DBSCAN_Cluster_Result.mat'), 'ClusterSmoothTable', 'Result');
+            result = {};
+            result.ClusterSmoothTable = ClusterSmoothTable{rr,1};
+            result.Result = Result{rr,1};
+            dbscanResults{ii} = result;
+        end
+        clearvars ClusterSmoothTable Result
 
         % display points
         if handles.showFigures
@@ -286,7 +285,7 @@ function RunCoclustering(~, ~, ~)
         end
 
         for ii=1:handles.numChannels
-            cmt = handles.dbscanResults{rr, ii}.ClusterSmoothTable;
+            cmt = dbscanResults{ii}.ClusterSmoothTable;
             points = [];
             for c=1:numel(cmt)
                 points = [points; cmt{c}.Points];
@@ -309,7 +308,7 @@ function RunCoclustering(~, ~, ~)
             fprintf('Region %d MaskOverlapCocluster ...\n', rr);
             statusbar(handles.handles.MainFig, sprintf('Region %d MaskOverlapCocluster ...\n', rr));
             mkdir(handles.MaskOverlap.Dir);
-            maskClusters = handles.dbscanResults{rr, handles.MaskOverlap.MaskChannel}.ClusterSmoothTable;
+            maskClusters = dbscanResults{handles.MaskOverlap.MaskChannel}.ClusterSmoothTable;
             result2A = cell(numel(maskClusters), handles.numChannels-1);
             curChan = 0;
             for ii=1:handles.numChannels
@@ -317,9 +316,9 @@ function RunCoclustering(~, ~, ~)
                     continue;
                 end
                 curChan = curChan + 1;
-                curClusters = handles.dbscanResults{rr, ii}.ClusterSmoothTable;
-                fprintf('MaskOverlapCocluster Comparing mask channel %d with channel %d ...\n', handles.MaskOverlap.MaskChannel, ii);
-                statusbar(handles.handles.MainFig, sprintf('MaskOverlapCocluster Comparing mask channel %d with channel %d ...', handles.MaskOverlap.MaskChannel, ii));
+                curClusters = dbscanResults{ii}.ClusterSmoothTable;
+                fprintf('Region %d MaskOverlapCocluster Comparing mask channel %d with channel %d ...\n', rr, handles.MaskOverlap.MaskChannel, ii);
+                statusbar(handles.handles.MainFig, sprintf('Region %d MaskOverlapCocluster Comparing mask channel %d with channel %d ...', rr, handles.MaskOverlap.MaskChannel, ii));
 
                 for c1 = 1:numel(maskClusters)
                     result2A{c1, 2*(curChan-1)+1} = []; % channels
@@ -339,8 +338,11 @@ function RunCoclustering(~, ~, ~)
 
                 %write to file
                 statusbar(handles.handles.MainFig, sprintf('Region %d MaskOverlapCocluster saving to files ...\n', rr));
-                f1 = fopen(fullfile(handles.MaskOverlap.Dir, sprintf('MaskOverlap_ROI%d_MaskChan%d_Ch%d_cocluster.csv', rr, handles.MaskOverlap.MaskChannel, ii)), 'wt');
-                f2 = fopen(fullfile(handles.MaskOverlap.Dir, sprintf('MaskOverlap_ROI%d_MaskChan%d_Ch%d_no_cocluster.csv', rr, handles.MaskOverlap.MaskChannel, ii)), 'wt');
+                filename1 = fullfile(handles.MaskOverlap.Dir, sprintf('MaskOverlap_ROI%d_MaskChan%d_Ch%d_cocluster.csv', rr, handles.MaskOverlap.MaskChannel, ii));
+                filename2 = fullfile(handles.MaskOverlap.Dir, sprintf('MaskOverlap_ROI%d_MaskChan%d_Ch%d_no_cocluster.csv', rr, handles.MaskOverlap.MaskChannel, ii));
+                fprintf('Save data to files %s; %d\n', filename1, filename2);
+                f1 = fopen(filename1, 'wt');
+                f2 = fopen(filename2, 'wt');
                 header1 = ['Index,Nb,Area,TotalAreaDensity,Circularity,Mean_Density,AvRelativeDensity,' ...
                          'NumOverlap,OverlapClusters,OverlapMinDistances\n'];
                 fprintf(f1, header1); 
@@ -365,7 +367,9 @@ function RunCoclustering(~, ~, ~)
             % write results to files
             fprintf('Region %d MaskOverlap: saving results to files ...\n', rr);
             MaskOverlapCocluster = result2A;
-            save(fullfile(handles.MaskOverlap.Dir, sprintf('MaskOverlap_ROI%d_MaskChan%d.mat', rr, handles.MaskOverlap.MaskChannel)), 'MaskOverlapCocluster');
+            filename = fullfile(handles.MaskOverlap.Dir, sprintf('MaskOverlap_ROI%d_MaskChan%d.mat', rr, handles.MaskOverlap.MaskChannel));
+            fprintf('Save to file %s\n', filename);
+            save(filename, 'MaskOverlapCocluster');
 
         end % approach 2a
 
@@ -378,7 +382,7 @@ function RunCoclustering(~, ~, ~)
             mkdir(handles.NearestNeighbour.Dir);
             for ii=1:handles.numChannels
 
-                Clusters1 = handles.dbscanResults{rr, ii}.ClusterSmoothTable;
+                Clusters1 = dbscanResults{ii}.ClusterSmoothTable;
 
                 for jj=1:handles.numChannels
                     if jj == ii
@@ -387,7 +391,7 @@ function RunCoclustering(~, ~, ~)
                     fprintf('Region %d NearestNeighbour between Ch%d and Ch%d ...\n', rr, ii, jj);
                     statusbar(handles.handles.MainFig, sprintf('Region %d NearestNeighbour between Ch%d and Ch%d ...', rr, ii, jj));
                     result2B = zeros(numel(Clusters1), handles.NearestNeighbour.NumNeighbours);
-                    Clusters2 = handles.dbscanResults{rr, jj}.ClusterSmoothTable;
+                    Clusters2 = dbscanResults{jj}.ClusterSmoothTable;
 
                     for c1 = 1:numel(Clusters1)
                         dists = zeros(numel(Clusters2), 1);
@@ -404,8 +408,11 @@ function RunCoclustering(~, ~, ~)
 
                     % save result Ch{ii} Ch{jj}
                     NearestNeighbourCocluster = result2B;
-                    dlmwrite(fullfile(handles.NearestNeighbour.Dir, sprintf('NearestNeighbour_ROI%d_Ch%d_Ch%d.csv', rr, ii, jj)), NearestNeighbourCocluster);
-                    save(fullfile(handles.NearestNeighbour.Dir, sprintf('NearestNeighbour_ROI%d_Ch%d_Ch%d.mat', rr, ii, jj)), 'NearestNeighbourCocluster');
+                    filename1 = fullfile(handles.NearestNeighbour.Dir, sprintf('NearestNeighbour_ROI%d_Ch%d_Ch%d.csv', rr, ii, jj));
+                    filename2 = fullfile(handles.NearestNeighbour.Dir, sprintf('NearestNeighbour_ROI%d_Ch%d_Ch%d.mat', rr, ii, jj));
+                    fprintf('Save data to files %s; %d\n', filename1, filename2);
+                    dlmwrite(filename1, NearestNeighbourCocluster);
+                    save(filename2, 'NearestNeighbourCocluster');
                 end
             end
 
