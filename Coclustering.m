@@ -340,7 +340,7 @@ function RunCoclustering(~, ~, ~)
                 statusbar(handles.handles.MainFig, sprintf('Region %d MaskOverlapCocluster saving to files ...\n', rr));
                 filename1 = fullfile(handles.MaskOverlap.Dir, sprintf('MaskOverlap_ROI%d_MaskChan%d_Ch%d_cocluster.csv', rr, handles.MaskOverlap.MaskChannel, ii));
                 filename2 = fullfile(handles.MaskOverlap.Dir, sprintf('MaskOverlap_ROI%d_MaskChan%d_Ch%d_no_cocluster.csv', rr, handles.MaskOverlap.MaskChannel, ii));
-                fprintf('Save data to files %s; %d\n', filename1, filename2);
+                fprintf('Save data to files %s; %s\n', filename1, filename2);
                 f1 = fopen(filename1, 'wt');
                 f2 = fopen(filename2, 'wt');
                 header1 = ['Index,Nb,Area,TotalAreaDensity,Circularity,Mean_Density,AvRelativeDensity,' ...
@@ -403,6 +403,9 @@ function RunCoclustering(~, ~, ~)
                             end
                         end
                         dists = sort(dists);
+                        if(numel(dists) < handles.NearestNeighbour.NumNeighbours)
+                            dists = padarray(dists, handles.NearestNeighbour.NumNeighbours - numel(dists), -1, 'post');
+                        end
                         result2B(c1, :) = dists(1:handles.NearestNeighbour.NumNeighbours, 1);
                     end
 
@@ -422,6 +425,7 @@ function RunCoclustering(~, ~, ~)
     
     set(handles.handles.MainFig, 'pointer', 'arrow'); drawnow;
     statusbar(handles.handles.MainFig, 'Finished! Results are stored in the input folder');
+    fprintf('Finished! Results are stored in the input folder');
 end
 
 
