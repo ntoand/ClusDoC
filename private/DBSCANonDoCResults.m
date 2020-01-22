@@ -29,6 +29,7 @@ function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, ClusterSmoothTableCombin
         channels = 3;
     end
 
+    disp(channels);
     for Ch = channels
 
         cellROIPair = [];
@@ -150,7 +151,11 @@ function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, ClusterSmoothTableCombin
         %         assignin('base', 'p', cellIter);
         %         assignin('base', 'q', roiIter);
 
-        ExportDBSCANDataToExcelFiles(cellROIPair, ResultCell, fullfile(Path_name, 'DBSCAN Results'), Ch, IsCombined);
+        dirname = sprintf('Ch%d', Ch);
+        if(IsCombined)
+            dirname = 'Combined';
+        end
+        ExportDBSCANDataToExcelFiles(cellROIPair, ResultCell, fullfile(Path_name, 'DBSCAN Results'), Ch, dirname);
 
     end % channel
 

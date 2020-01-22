@@ -49,6 +49,7 @@ function ExportDBSCANDataToExcelFiles(cellROIPair, Result, outputFolder, chan, d
         assignin('base', 'Matrix_Result', Matrix_Result);
         
         matOut = [cellROIPair, nan(size(cellROIPair, 1), 1), Matrix_Result];
+        fprintf('Save to file: %s\n', fullfile(outputFolder, sprintf('DBSCAN Results %s.txt', dirname)));
         fID = fopen(fullfile(outputFolder, sprintf('DBSCAN Results %s.txt', dirname)), 'w+');
         fprintf(fID, strcat(repmat('%s\t', 1, length(HeaderArray)-1), '%s\r\n'), HeaderArray{:});
         
