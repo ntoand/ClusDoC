@@ -117,17 +117,22 @@ function [ClusterSmoothTableCh1, ClusterSmoothTableCh2, ClusterSmoothTableCombin
                     % Fig1, fig2 fig3 : handle for figures plot in the
                     % function.
 
+                    if (size(ClusterCh, 1) > 0)
 
-                    clusterTable = AppendToClusterTableInternal(clusterTable, Ch, cellIter, roiIter, ClusterCh, classOut, Data_DoC1(:, 12));
+                        clusterTable = AppendToClusterTableInternal(clusterTable, Ch, cellIter, roiIter, ClusterCh, classOut, Data_DoC1(:, 12));
 
-                    % Save the plot and data
-                    switch Ch
-                        case 1
-                            ClusterSmoothTableCh1{roiIter,cellIter} = ClusterCh;
-                        case 2
-                            ClusterSmoothTableCh2{roiIter,cellIter} = ClusterCh;
-                        case 3
-                            ClusterSmoothTableCombined{roiIter,cellIter} = ClusterCh;
+                        % Save the plot and data
+                        switch Ch
+                            case 1
+                                ClusterSmoothTableCh1{roiIter,cellIter} = ClusterCh;
+                            case 2
+                                ClusterSmoothTableCh2{roiIter,cellIter} = ClusterCh;
+                            case 3
+                                ClusterSmoothTableCombined{roiIter,cellIter} = ClusterCh;
+                        end
+                        
+                    else
+                        fprintf('WARNING: no cluster found, ignore results');
                     end
 
                     %                         Name1 = sprintf('_Table_%d_Region_%d_', p, q);
